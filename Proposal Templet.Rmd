@@ -1,7 +1,7 @@
 ---
 title: "Proposal: An Analysis of the association Energy Insecurity and Mental Distress in the United States"
 output:
-  html_document:
+  github_document:
     df_print: paged
     toc: true
     toc_float: true
