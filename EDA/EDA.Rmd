@@ -1,0 +1,268 @@
+---
+title: "EDA"
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(knitr)
+```
+
+# EDA for Household Energy Insecurity
+```{r}
+RECS_EI = read_csv("clean data/RECS_Energy_Insecurity.csv")
+RECS_EI_code = read_xlsx("clean data/CodeBook_State_Level_Energy_Insecurity.xlsx")
+
+EI_long = RECS_EI |>
+  pivot_longer(cols = c(EI_proportion, PO_proportion),
+               names_to = "Type", values_to = "Value")
+
+plot_EI = ggplot(EI_long, aes(x = reorder(state, Value), y = Value, color = Type)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = state), color = "gray60") +
+  coord_flip() +
+  labs(title = "Difference Between EI and PO for Each State",
+       x = "State",
+       y = "Proportion") +
+  theme_minimal()
+
+rank_table =
+  RECS_EI |>
+  mutate(
+    EI_rank = dense_rank(desc(EI_proportion)),
+    PO_rank = dense_rank(desc(PO_proportion))
+  ) |>
+  select(state, EI_rank, PO_rank) |>
+  arrange(EI_rank)
+
+RECS_EI_range_mean = RECS_EI |>
+  summarise(
+    mean_EI = mean(EI_proportion),
+    range_EI = paste0(round(min(EI_proportion),3), "–", round(max(EI_proportion),3)),
+    mean_PO = mean(PO_proportion),
+    range_PO = paste0(round(min(PO_proportion),3), "–", round(max(PO_proportion),3))
+  )
+```
+First, I calculated the average and range of both EI and PO proportions across all 50 states plus the District of Columbia. 
+The average level of energy insecurity (EI) is about `r round(RECS_EI_range_mean$mean_EI, 3)`, with values ranging from `r RECS_EI_range_mean$range_EI`. For power outage proportion (PO), the average is roughly `r round(RECS_EI_range_mean$mean_PO, 3)`, and the range spans from `r RECS_EI_range_mean$range_PO`.
+
+The distribution plots are shown below.
+```{r}
+p_dist_EI =
+  RECS_EI |>
+  ggplot(aes(x = EI_proportion)) +
+  geom_histogram(bins = 20, fill = "skyblue", alpha = 0.8) +
+  labs(title = "Distribution of EI Proportion",
+       x = "EI proportion",
+       y = "Count of states") +
+  theme_minimal()
+
+p_dist_EI
+
+p_dist_PO =
+  RECS_EI |>
+  ggplot(aes(x = PO_proportion)) +
+  geom_histogram(bins = 20, fill = "orange", alpha = 0.8) +
+  labs(title = "Distribution of PO Proportion",
+       x = "PO proportion",
+       y = "Count of states") +
+  theme_minimal()
+
+p_dist_PO
+```
+Both distributions are right-skewed and do not appear to be multimodal. This suggests that most states fall within the low-to-moderate range of EI or PO, while a small number of states experience disproportionately high levels of energy insecurity or power outages.
+
+To examine whether the two variables are related, I also put them together. The plot for both is below.
+```{r , echo=FALSE}
+plot_EI
+```
+
+
+I have also computed the ranks of EI and PO for each state, the results are shown in the table below.
+```{r , echo=FALSE}
+kable(rank_table, caption = "Ranks of EI and PO by State")
+```
+There are 51 states in total, but many states share the same EI or PO proportion, so we end up with only 21 unique EI ranks and 24 PO ranks.
+
+I expected those with high PO rank will also have high EI rank, but the results above don’t really show a clear pattern. So, I run a simple linear regression.
+
+```{r}
+fit_EI = lm(EI_proportion ~ PO_proportion, data = RECS_EI)
+summary(fit_EI)
+
+ggplot(RECS_EI, aes(x = PO_proportion, y = EI_proportion)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Relationship Between EI and PO",
+       x = "PO proportion",
+       y = "EI proportion")
+```
+The regression result isn't great. The points are pretty scattered, and the R² is only about `r round(summary(fit_EI)$r.squared, 3)`, meaning PO explains only a small part of the differences in EI across states.
+
+Still, the slope is positive, so if there is a relationship between PO and EI, it's a positive one. States with more power outages tend to have slightly higher energy insecurity, but the effect is weak.
+
+Overall, this suggests that how often people experience power outages probably isn’t the main reason why a state has more energy-insecure households. Other factors—like income, housing conditions, or energy costs—are likely playing a bigger role.
+
+# EDA for Census
+```{r}
+PLACES = read_csv("clean data/PLACES_Census_Tract_Data.csv")
+PLACES_code = read_csv("clean data/Codebook_PLACES.csv")
+
+mental_health_vars = PLACES |>
+  select(
+    state_desc,
+    county_name,
+    tract_fips,
+    mhlth_crude_prev,
+    depression_crude_prev
+  )
+
+plot_mhlth = mental_health_vars |>
+  ggplot(aes(x = mhlth_crude_prev)) +
+  geom_histogram(bins = 40) +
+  labs(
+    title = "Distribution of Poor Mental Health (mhlth_crude_prev)",
+    x = "Percent of adults with ≥14 days of poor mental health",
+    y = "Number of census tracts"
+  ) +
+  theme_minimal()
+
+plot_depression = mental_health_vars |>
+  ggplot(aes(x = depression_crude_prev)) +
+  geom_histogram(bins = 40) +
+  labs(
+    title = "Distribution of Depression Prevalence (depression_crude_prev)",
+    x = "Percent of adults ever told they have depression",
+    y = "Number of census tracts"
+  ) +
+  theme_minimal()
+
+mental_summary =
+  mental_health_vars |>
+  summarise(
+    mean_mhlth = mean(mhlth_crude_prev, na.rm = TRUE),
+    range_mhlth = paste0(round(min(mhlth_crude_prev, na.rm = TRUE), 3), "–", 
+                         round(max(mhlth_crude_prev, na.rm = TRUE), 3)),
+    mean_dep = mean(depression_crude_prev, na.rm = TRUE),
+    range_dep = paste0(round(min(depression_crude_prev, na.rm = TRUE), 3), "–", 
+                       round(max(depression_crude_prev, na.rm = TRUE), 3))
+  )
+```
+
+Our research focuses on mental health, so I first examined the distributions of poor mental health and depression prevalence across census tracts. Both distributions are slightly skewed to the right and unimodal. The average prevalence of poor mental health is `r round(mental_summary$mean_mhlth, 3)`, ranging from `r mental_summary$range_mhlth`%. Depression shows a similar pattern, with an average prevalence of `r round(mental_summary$mean_dep, 3)` and a range of `r mental_summary$range_dep`%.
+```{r , echo=FALSE}
+plot_mhlth
+plot_depression
+```
+
+Next, I aggregated the census-tract data to the state level by averaging mental health measures across counties.
+```{r}
+state_summary =
+  mental_health_vars |>
+  group_by(state_desc) |>
+  summarise(
+    mean_mhlth = mean(mhlth_crude_prev, na.rm = TRUE),
+    mean_depression = mean(depression_crude_prev, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+state_summary =
+  state_summary |>
+  mutate(
+    mhlth_rank = dense_rank(desc(mean_mhlth)),
+    depression_rank = dense_rank(desc(mean_depression))
+  ) |>
+  arrange(mhlth_rank)   
+
+kable(
+  state_summary,
+  caption = "State-Level Averages and Rankings for Mental Health Outcomes",
+  digits = 3
+)
+```
+
+The census dataset includes 50 states, resulting in 50 unique ranks for poor mental health and 50 unique ranks for depression.
+
+I did not examine the relationship between depression and poor mental health, because their association is already well established and clearly reflected in the data. Instead, I am more interested in how mental health outcomes relate to energy insecurity.
+
+# EDA for Census and Household Energy Insecurity
+I first compared the state-level ranks, and the results are shown in the table below.
+```{r}
+mh_rank_table =
+  state_summary |>
+  select(state_desc, mhlth_rank, depression_rank) |>
+  rename(state = state_desc)
+
+rank_compare =
+  rank_table |>
+  left_join(mh_rank_table, by = "state") |>
+  arrange(EI_rank)   
+
+kable(
+  rank_compare,
+  caption = "State-Level Ranks of EI, PO, Poor Mental Health, and Depression",
+  digits = 3
+)
+```
+New Jersey is not included in the census data, likely due to small sample size or CDC’s small-area suppression rules. As a result, we can only see its energy insecurity data in the table, but not its mental health estimates.
+
+Since the table alone is not easy to interpret visually, I created an additional scatterplot using the poor mental health rank and EI rank for each state. (New Jersey does not appear in the plot because its mental health data is missing.)
+```{r}
+rank_EI_mhlth =
+  rank_table |>
+  left_join(
+    state_summary |> 
+      select(state_desc, mhlth_rank) |>
+      rename(state = state_desc),
+    by = "state"
+  )
+
+ggplot(rank_EI_mhlth, aes(x = EI_rank, y = mhlth_rank, label = state)) +
+  geom_point(color = "steelblue", size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(
+    title = "Relationship Between Energy Insecurity Rank and Poor Mental Health Rank",
+    x = "EI Rank (1 = Highest Energy Insecurity)",
+    y = "Poor Mental Health Rank (1 = Highest Poor Mental Health Prevalence)"
+  ) +
+  theme_minimal()
+```
+
+The relationship between EI rank and poor mental health rank has some degree of association in the scatterplot. States with higher energy insecurity tend to also have worse mental health outcomes.
+
+To examine this relationship further, I conducted a simple linear regression using the proportions of energy insecurity and poor mental health, instead of their ranks.
+```{r}
+ei_mh_prop =
+  RECS_EI |>
+  select(state, EI_proportion) |>
+  left_join(
+    state_summary |> 
+      select(state_desc, mean_mhlth) |> 
+      rename(state = state_desc),
+    by = "state"
+  )
+
+
+ei_mh_prop_clean = ei_mh_prop |>
+  filter(!is.na(mean_mhlth))
+
+
+fit_prop = lm(mean_mhlth ~ EI_proportion, data = ei_mh_prop_clean)
+
+summary(fit_prop)
+
+ggplot(ei_mh_prop_clean, aes(x = EI_proportion, y = mean_mhlth)) +
+  geom_point(color = "steelblue", size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Relationship Between Energy Insecurity and Poor Mental Health (Proportions)",
+    x = "Energy Insecurity Proportion",
+    y = "Poor Mental Health Proportion"
+  ) +
+  theme_minimal()
+```
+This simple regression supports a moderate positive association, which provides evidence supporting our initial expectation: states with higher energy insecurity tend to report higher levels of poor mental health, and the relationship is both statistically significant and practically meaningful.
+The model explains about 44% of the variation in poor mental health across states, suggesting that energy insecurity is a meaningful but not exclusive predictor.

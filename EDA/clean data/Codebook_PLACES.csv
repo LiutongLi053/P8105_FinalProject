@@ -1,0 +1,37 @@
+Variable Name,Description,Category
+tract_fips,Census tract FIPS code,Geographic Identifier
+state_desc,State name,Geographic Identifier
+total_population,Total population count for the tract,Geographic Identifier
+county_name,County name,Geographic Identifier
+county_fips,County FIPS code,Geographic Identifier
+long,Longitude coordinate,Geographic Identifier
+lat,Latitude coordinate,Geographic Identifier
+access2_crude_prev,Prevalence of no health insurance access,Healthcare Access
+arthritis_crude_prev,Prevalence of arthritis,Chronic Disease
+binge_crude_prev,Prevalence of binge drinking,Health Behavior
+bphigh_crude_prev,Prevalence of high blood pressure,Chronic Disease
+bpmed_crude_prev,Prevalence of taking blood pressure medication,Treatment
+cancer_crude_prev,Prevalence of cancer (excluding skin cancer),Chronic Disease
+casthma_crude_prev,Prevalence of current asthma,Chronic Disease
+cervical_crude_prev,Prevalence of cervical cancer screening,Preventive Care
+chd_crude_prev,Prevalence of coronary heart disease,Chronic Disease
+checkup_crude_prev,Prevalence of routine health checkup,Preventive Care
+cholscreen_crude_prev,Prevalence of cholesterol screening,Preventive Care
+colon_screen_crude_prev,Prevalence of colorectal cancer screening,Preventive Care
+copd_crude_prev,Prevalence of COPD,Chronic Disease
+corem_crude_prev,Prevalence of core preventive services among men,Preventive Care
+corew_crude_prev,Prevalence of core preventive services among women,Preventive Care
+csmoking_crude_prev,Prevalence of current smoking,Health Behavior
+dental_crude_prev,Prevalence of dental visits,Preventive Care
+depression_crude_prev,Prevalence of depression,Mental Health
+diabetes_crude_prev,Prevalence of diabetes,Chronic Disease
+ghlth_crude_prev,Prevalence of fair/poor general health,Health Status
+highchol_crude_prev,Prevalence of high cholesterol,Chronic Disease
+kidney_crude_prev,Prevalence of kidney disease,Chronic Disease
+lpa_crude_prev,Prevalence of no leisure-time physical activity,Health Behavior
+mammouse_crude_prev,Prevalence of mammography use,Preventive Care
+mhlth_crude_prev,Prevalence of poor mental health,Mental Health
+obesity_crude_prev,Prevalence of obesity,Health Behavior
+sleep_crude_prev,Prevalence of insufficient sleep,Health Behavior
+stroke_crude_prev,Prevalence of stroke,Chronic Disease
+teethlost_crude_prev,Prevalence of all teeth lost,Oral Health
