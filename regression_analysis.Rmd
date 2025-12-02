@@ -1,6 +1,10 @@
 ---
 title: "regression_analysis"
-output: github_document
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    theme: flatly
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +17,7 @@ library(readxl)
 library(knitr)
 library(patchwork)
 library(glmnet)
+library(modelr)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -191,6 +196,97 @@ rmse_en <- sqrt(mean((y - pred_en)^2))
 rmse_en
 ```
 
+### Cross Validation
+
+```{r}
+mlr_basic =  lm(mean_glth ~EI_proportion * PO_proportion ,
+     data = regression_data)
+
+summary(mlr_basic) 
+```
+
+```{r}
+cv_df =
+  crossv_mc(regression_data, n = 100) |>
+  mutate(
+    train = map(train, as_tibble),
+    test  = map(test, as_tibble)
+  )
+
+cv_df =
+  cv_df |>
+  mutate(
+    # Model 1: Full MLR
+    model_1 = map(train, \(df)
+      lm(mean_glth ~ mean_mhlth + mean_depression + mean_access +
+           mean_smoking + mean_binge + mean_sleep + mean_lpa +
+           mean_diabetes + mean_bphigh + EI_proportion + PO_proportion,
+         data = df)
+    ),
+
+    # Model 2: Elastic Net (refit λ for each split)
+    model_2 = map(train, \(df) {
+      y <- df$mean_glth
+      X <- df |>
+        dplyr::select(
+          mean_mhlth, mean_depression, mean_access, mean_smoking,
+          mean_binge, mean_sleep, mean_lpa, mean_diabetes, mean_bphigh,
+          EI_proportion, PO_proportion
+        ) |>
+        as.matrix()
+
+      cvfit <- cv.glmnet(X, y, alpha = 0.5)
+      best_lambda <- cvfit$lambda.min
+      glmnet(X, y, alpha = 0.5, lambda = best_lambda)
+    }),
+
+    # Model 3: Electricity-only + Interaction
+    model_3 = map(train, \(df)
+      lm(mean_glth ~ EI_proportion * PO_proportion, data = df)
+    )
+  )
+
+cv_df =
+  cv_df |>
+  mutate(
+    rmse_model_1 = map2_dbl(model_1, test, \(fit, df)
+      rmse(fit, df)
+    ),
+
+    rmse_model_2 = map2_dbl(model_2, test, \(fit, df) {
+      y_test <- df$mean_glth
+      X_test <- df |>
+        dplyr::select(
+          mean_mhlth, mean_depression, mean_access, mean_smoking,
+          mean_binge, mean_sleep, mean_lpa, mean_diabetes, mean_bphigh,
+          EI_proportion, PO_proportion
+        ) |> as.matrix()
+      pred <- predict(fit, X_test) |> as.numeric()
+      sqrt(mean((y_test - pred)^2))
+    }),
+
+    rmse_model_3 = map2_dbl(model_3, test, \(fit, df)
+      rmse(fit, df)
+    )
+  )
+
+```
+
+```{r}
+cv_df |>
+  dplyr::select(starts_with("rmse")) |>
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) |>
+  ggplot(aes(x = model, y = rmse, fill = model)) +
+  geom_violin() +
+  ggtitle("Comparison of RMSE Across Models")
+
+```
+
 
 ### Bootstrap
 After fitting the MLR model, we applied the bootstrap to evaluate how stable our results are under repeated sampling. The usual regression output relies on assumptions such as normality and constant variance, which may not fully hold in our data. Bootstrap resampling lets us approximate the sampling distribution of key estimates directly from the data, providing more robust standard errors and confidence intervals. This helps us assess whether the model’s conclusions remain consistent across resampled datasets.
@@ -227,5 +323,5 @@ boot_se =
 boot_se
 ```
 
-### Cross Validation
+
 

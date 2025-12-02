@@ -177,6 +177,64 @@ rmse_en
 
     ## [1] 0.6592415
 
+### Robust Regression
+
+We included a robust regression as a sensitivity check because OLS is
+highly sensitive to outliers and high-leverage points. Several variables
+in our dat such as `mean_smoking`, `mean_binge`, `mean_sleep`, and the
+electricity proportions—are prone to extreme values at the state level.
+Robust regression down-weights these observations, allowing us to verify
+whether the direction and importance of the predictors remain consistent
+when the influence of outliers is reduced.
+
+``` r
+fit_robust <- MASS::rlm(
+  mean_glth ~ mean_mhlth + mean_depression + mean_access + mean_smoking +
+    mean_binge + mean_sleep + mean_lpa + mean_diabetes + mean_bphigh +
+    EI_proportion + PO_proportion,
+  data = regression_data
+)
+
+coef_robust <- coef(fit_robust)
+coef_robust |> knitr::kable(digits = 3)
+```
+
+|                 |      x |
+|:----------------|-------:|
+| (Intercept)     | -6.399 |
+| mean_mhlth      |  0.549 |
+| mean_depression |  0.012 |
+| mean_access     |  0.026 |
+| mean_smoking    | -0.029 |
+| mean_binge      |  0.007 |
+| mean_sleep      | -0.098 |
+| mean_lpa        |  0.239 |
+| mean_diabetes   |  0.664 |
+| mean_bphigh     |  0.024 |
+| EI_proportion   | 13.193 |
+| PO_proportion   | -2.171 |
+
+``` r
+pred_robust <- predict(fit_robust, regression_data)
+
+r2_robust <- 1 - sum((regression_data$mean_glth - pred_robust)^2) /
+  sum((regression_data$mean_glth - mean(regression_data$mean_glth))^2)
+
+rmse_robust <- sqrt(mean((regression_data$mean_glth - pred_robust)^2))
+
+r2_robust
+```
+
+    ## [1] 0.9616802
+
+``` r
+rmse_robust
+```
+
+    ## [1] 0.6208425
+
+### Cross Validation
+
 ### Bootstrap
 
 After fitting the MLR model, we applied the bootstrap to evaluate how
@@ -235,5 +293,3 @@ boot_se
     ## 10 mean_mhlth       0.169 
     ## 11 mean_sleep       0.0816
     ## 12 mean_smoking     0.0859
-
-### Cross Validation
