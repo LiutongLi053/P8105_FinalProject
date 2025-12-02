@@ -108,8 +108,8 @@ Overall, this suggests that how often people experience power outages probably i
 
 # EDA for Census
 ```{r}
-PLACES = read_csv("clean data/PLACES_Census_Tract_Data.csv")
-PLACES_code = read_csv("clean data/Codebook_PLACES.csv")
+PLACES = read_csv("EDA/clean data/PLACES_Census_Tract_Data.csv")
+PLACES_code = read_csv("EDA/clean data/Codebook_PLACES.csv")
 
 mental_health_vars = PLACES |>
   select(
