@@ -1,6 +1,10 @@
 ---
 title: "regression_analysis"
-output: github_document
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    theme: flatly
 ---
 
 ```{r setup, include=FALSE}
@@ -335,5 +339,5 @@ boot_se =
 boot_se
 ```
 
-
+The bootstrap results indicate notable differences in coefficient stability across predictors in the Elastic Net model. Most variables, such as mean_access, mean_binge, mean_bphigh, mean_mhlth, mean_sleep, and mean_smoking, exhibit very small bootstrap standard errors, suggesting that their estimated effects remain highly consistent across resampled datasets. In contrast, EI_proportion and PO_proportion show substantially larger standard errors, indicating considerable variability in their estimated coefficients and reduced stability under repeated sampling. Overall, the bootstrap results suggest that the majority of predictors contribute reliably to the model, while the two proportion-based variables demonstrate much weaker stability.
 
