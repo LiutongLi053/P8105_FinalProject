@@ -1,0 +1,81 @@
+---
+title: "Data Cleaning"
+output: html_document
+date: "2025-12-03"
+---
+
+# Data Cleaning Protocol
+
+### 1. RECS Data Processing
+
+#### Step 1: Variable Selection and Extraction
+We extracted variables relevant to energy insecurity measurement, household identification, and geographic location from the RECS dataset.
+
+#### Step 2: Energy Insecurity Classification
+Households were classified as "energy insecure" if they reported **any** of the following:
+
+1. Forgoing food or medicine to pay energy bills
+2. Maintaining home at unsafe or unhealthy temperature
+3. Receiving a disconnection notice
+4. Being unable to use heating/cooling equipment due to:
+   - Broken equipment with financial constraints for repairs
+   - Utility service disruption due to non-payment
+   - Inability to afford bulk fuel delivery
+
+#### Step 3: Missing Data Imputation
+We employed **hot-deck imputation** to address missing values while preserving data integrity:
+
+1. **Donor Matching**: Recipient households with missing values were matched to similar donor households with complete data based on housing characteristics and energy usage patterns
+2. **Range Constraints**: Square-footage range responses informed donor selection when available
+3. **Distribution Preservation**: Imputed values were constrained within reported ranges to maintain original variable distributions
+
+This approach minimizes bias while utilizing all available information in the dataset.
+
+#### Step 4: State-Level Aggregation
+Using sample weights (`nweight`), we aggregated household-level data to generate state-level estimates:
+
+- Weighted counts of energy insecure households
+- State-level proportions of energy insecurity
+- Similar calculations for extended power outages
+
+### 2. PLACES Data Processing
+
+#### Step 1: Missing Data Assessment and Handling
+Our initial analysis revealed:
+
+- **Total Missing**: 2,235 out of 72,337 records (3.09%)
+- **Missing Pattern**: 89.44% of missing cases (1,999 records) lacked blood pressure and cholesterol measurements
+- **Decision**: Implemented complete-case analysis by removing records with any missing values
+
+**Rationale**: The low overall missingness rate and concentrated pattern in specific variables justified listwise deletion, as it simplifies analysis without substantially reducing statistical power.
+
+#### Step 2: Variable Selection
+We selected variables based on their relevance to our research question:
+
+- **Primary Outcome**: `mhlth_crude_prev` (poor mental health prevalence)
+- **Potential Confounders**: Chronic disease prevalence, health behaviors, healthcare access measures
+- **Geographic Identifiers**: State, county, and tract information for aggregation
+
+#### Step 3: State-Level Aggregation
+We calculated population-weighted averages at the state level:
+
+- Weighted by `total_population` to account for varying tract sizes
+- Generated state-level prevalence estimates for all health measures
+- Ensured compatibility with RECS state-level data
+
+### 3. Dataset Integration
+
+#### Step 1: Geographic Harmonization
+- Standardized state names across datasets
+- Verified consistent state representation (50 states + District of Columbia)
+- Created common geographic identifiers for merging
+
+#### Step 2: Final Merged Dataset
+The cleaned and integrated dataset contains:
+
+- **51 observations** (50 states + District of Columbia)
+- **Key Variables**:
+  - State-level energy insecurity estimates from RECS
+  - State-level mental health prevalence from PLACES
+  - Covariates for potential confounding control
+- **Format**: Ready for exploratory analysis, visualization, and regression modeling

@@ -1,0 +1,141 @@
+---
+title: "Data Description"
+date: "2025-11-10"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Dataset Description
+
+## Research Motivation
+
+Mental health represents a critical component of public health, significantly influencing individual well-being and broader social stability. While traditional determinants such as physical health status, income, employment, and social isolation have been extensively studied, this research investigates a novel perspective by examining how **energy insecurity** impacts mental health outcomes. Limited access to affordable, reliable energy—manifested through high utility costs or the inability to maintain adequate heating and cooling—can induce chronic stress, disrupt sleep patterns, and exacerbate anxiety. Using 2020 data from the U.S. Energy Information Administration's Residential Energy Consumption Survey (RECS) and the Centers for Disease Control and Prevention's PLACES dataset, this study explores how household-level energy insecurity relates to population-level mental distress across U.S. states.
+
+## Dataset Overview
+
+Our analysis integrates two nationally representative datasets that provide complementary perspectives on our research question:
+
+1. **Residential Energy Consumption Survey (RECS)**: Captures household-level energy insecurity indicators
+2. **CDC PLACES Data**: Provides community-level mental and physical health prevalence estimates
+
+The temporal alignment (2020 reference period) and comprehensive geographic coverage of both datasets enable robust state-level analysis of the association between energy insecurity and mental distress.
+
+---
+
+## 1. Residential Energy Consumption Survey (RECS)
+
+### 1.1 Background and Methodology
+
+The **Residential Energy Consumption Survey (RECS)** is administered by the U.S. Energy Information Administration (EIA) to collect energy characteristics, consumption patterns, and associated costs for housing units across the United States. The 2020 RECS represents the 15th iteration of this survey, which was first conducted in 1978.
+
+**Key Survey Features:**
+
+- **Collection Period**: 2020
+- **Sample Size**: Approximately 18,500 households
+- **Population Represented**: 123.5 million occupied housing units
+- **Collection Method**: Transitioned from in-person to web/mail surveys with utility data linkage
+- **Data Integration**: Combines self-reported survey data with actual energy consumption data from utility providers
+
+The survey employs a multi-stage area probability design to select housing units, ensuring national representativeness. Sample weights (`nweight`) are provided to generate population-level estimates.
+
+### 1.2 Energy Insecurity Operationalization
+
+Energy insecurity in RECS 2020 is measured through multiple complementary indicators that capture different dimensions of household energy challenges:
+
+| Dimension | Specific Indicators | Measurement Approach |
+|-----------|-------------------|---------------------|
+| **Financial Strain** | Choosing between energy bills and basic needs | `SCALEB`, `SCALEG`, `SCALEE` scales |
+| **Temperature Control** | Inability to maintain safe/healthy home temperatures | `COLDMA`, `HOTMA` indicators |
+| **Service Disruptions** | Utility disconnection notices or service interruptions | Disconnection notice variables |
+| **Equipment Limitations** | Unable to use heating/cooling equipment due to: | |
+| | - Equipment breakdown with financial constraints | `NOHEATBROKE`, `NOACBROKE` |
+| | - Utility service disruption due to non-payment | `NOHEATEL`, `NOHEATNG` |
+| | - Inability to afford bulk fuel delivery | `NOHEATBULK` |
+| **Extended Outages** | Power outages lasting 24+ hours | Duration variables |
+
+### 1.3 Key Variables for Analysis
+
+#### Identification and Weighting Variables
+- **`DOEID`**: Unique household identifier
+- **`state_name`**: Geographic location (state)
+- **`nweight`**: Final sample weight for population estimates
+
+#### Energy Insecurity Indicators
+
+- **Financial Burden**: `SCALEB`, `SCALEG`, `SCALEE` (energy affordability scales)
+- **Payment Difficulty**: `PAYHELP` (difficulty paying energy bills)
+- **Equipment Issues**: `NOHEATBROKE`, `NOACBROKE` (broken heating/cooling)
+- **Fuel Disruptions**: `NOHEATEL`, `NOHEATNG`, `NOHEATBULK` (heating fuel issues)
+- **Duration Measures**: `NOHEATDAYS`, `NOACDAYS` (days without heating/cooling)
+- **Temperature Control**: `COLDMA`, `HOTMA` (maintaining unsafe temperatures)
+- **Assistance Programs**: `ENERGYASST` series (energy assistance participation)
+
+#### Derived Energy Insecurity Measures
+From these indicators, we calculate two primary outcome measures:
+
+1. **Energy Insecurity (`EI_number`, `EI_proportion`)**:
+   - Number (in millions) and percentage of housing units experiencing energy insecurity
+   - Definition includes: forgoing food/medicine for energy bills, maintaining unsafe temperatures, receiving disconnection notices, and being unable to use heating/cooling equipment due to financial constraints or supply disruptions
+
+2. **Extended Power Outages (`PO_number`, `PO_proportion`)**:
+   - Number (in millions) and percentage of housing units experiencing power outages lasting 24 hours or more
+
+---
+
+## 2. CDC PLACES: Census Tract Health Data
+
+### 2.1 Dataset Overview
+
+The **PLACES** dataset provides model-based census tract level estimates for chronic disease risk factors, health outcomes, and clinical preventive service use across the United States. Developed by the Centers for Disease Control and Prevention (CDC), Division of Population Health, this dataset enables local public health assessment and planning.
+
+**Key Dataset Features:**
+
+- **Release Year**: 2022 (using 2020 BRFSS data as primary source)
+- **Geographic Coverage**: All 50 states and District of Columbia
+- **Geographic Levels**: County, place, census tract, and ZIP Code Tabulation Areas
+- **Total Observations**: 72,337 census tracts
+- **Funding**: Robert Wood Johnson Foundation in conjunction with the CDC Foundation
+
+### 2.2 Methodology and Data Sources
+
+PLACES employs a multilevel regression and post-stratification (MRP) approach to generate small-area estimates. The model integrates:
+
+- **Primary Source**: Behavioral Risk Factor Surveillance System (BRFSS) 2020 data for 25 measures (2021 data for 4 biennial measures)
+- **Population Data**: U.S. Census Bureau 2020 population estimates
+- **Socioeconomic Covariates**: American Community Survey (ACS) 2015–2019 estimates
+
+**Important Note**: These are model-based estimates designed for surveillance and planning purposes. The CDC cautions against using them for program evaluation due to the model's inability to detect effects of local interventions.
+
+### 2.3 Health Measures Included
+
+The dataset includes 40 measures across six domains. For our analysis, we focus primarily on mental health indicators while retaining relevant covariates:
+
+#### Primary Mental Health Outcome
+- **`mhlth_crude_prev`**: Crude prevalence of poor mental health (percentage of adults reporting ≥14 days of poor mental health in past 30 days)
+
+#### Additional Health Measures (Selected as Covariates)
+
+| Category | Variables | Purpose in Analysis |
+|----------|-----------|-------------------|
+| **Mental Health** | `depression_crude_prev` | Secondary mental health outcome |
+| **Physical Health** | `phlth_crude_prev`, `ghlth_crude_prev` | Health status controls |
+| **Chronic Diseases** | `arthritis_crude_prev`, `bphigh_crude_prev`, `diabetes_crude_prev`, `cancer_crude_prev`, `casthma_crude_prev`, `chd_crude_prev`, `copd_crude_prev`, `highchol_crude_prev`, `kidney_crude_prev`, `stroke_crude_prev` | Comorbidity controls |
+| **Health Behaviors** | `binge_crude_prev`, `csmoking_crude_prev`, `lpa_crude_prev`, `obesity_crude_prev`, `sleep_crude_prev` | Behavioral risk factor controls |
+| **Preventive Care** | `access2_crude_prev`, `checkup_crude_prev`, `cholscreen_crude_prev`, `colon_screen_crude_prev`, `dental_crude_prev` | Healthcare access controls |
+| **Oral Health** | `teethlost_crude_prev` | Additional health indicator |
+
+#### Geographic Identifiers
+- **`tract_fips`**: Census tract FIPS code
+- **`state_desc`**: State name
+- **`county_name`**: County name
+- **`county_fips`**: County FIPS code
+- **`total_population`**: Population count for the tract
+- **`long`**, **`lat`**: Geographic coordinates
+
+---
