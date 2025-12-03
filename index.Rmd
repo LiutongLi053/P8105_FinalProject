@@ -1,0 +1,15 @@
+---
+title: "Home"
+---
+
+<!-- Hero 区域：背景 + 大标题 -->
+<header class="hero">
+  <div class="hero-overlay">
+    <div class="hero-inner">
+      <h1 class="hero-title">Energy Insecurity and Public Health</h1>
+      <p class="hero-subtitle">
+        Exploring the relationship between electricity burden and health across U.S. states
+      </p>
+    </div>
+  </div>
+</header>
