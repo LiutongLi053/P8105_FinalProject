@@ -1,0 +1,154 @@
+
+---
+title: "Data Cleaning and Description"
+date: "2025-11-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Data Description and Cleaning Protocol
+
+## Dataset Overview
+
+This document describes the two primary datasets used in our analysis: the Residential Energy Consumption Survey (RECS) and the PLACES census tract health data, along with their respective cleaning procedures.
+
+## 1. Residential Energy Consumption Survey (RECS)
+
+### Background
+The **Residential Energy Consumption Survey (RECS)** is administered by the U.S. Energy Information Administration (EIA) to a nationally representative sample of housing units. The survey collects comprehensive data on:
+
+- Housing unit energy characteristics
+- Household energy usage patterns  
+- Demographic and socioeconomic information
+
+For the 2020 survey cycle, the EIA transitioned from in-person interviews to web and mail-based data collection methods. Self-reported survey data are combined with actual energy consumption data from utility providers to estimate energy costs and usage patterns for various end uses including heating, cooling, and appliances.
+
+### Energy Insecurity Measurement
+
+In RECS 2020, household energy insecurity is operationalized through multiple indicators:
+
+- **Financial strain**: Choosing between paying for essential needs (food/medicine) and energy bills
+- **Temperature maintenance**: Inability to maintain home at safe or healthy temperatures
+- **Service disruptions**: Receiving disconnection notices or experiencing service interruptions
+- **Equipment limitations**: Being unable to use heating or cooling equipment due to:
+  - Equipment breakdown with financial constraints for repairs
+  - Utility service disruption due to non-payment
+  - Inability to afford bulk fuel delivery
+- **Extended outages**: Experiencing power outages lasting ≥24 hours
+
+### Data Processing
+
+#### Variable Selection
+We selected the following variables to construct our energy insecurity measurement:
+
+**Core Energy Insecurity Indicators:**
+
+- `SCALEB`, `SCALEG`, `SCALEE` - Energy affordability scales
+- `PAYHELP` - Difficulty paying energy bills
+- `NOHEATBROKE`, `NOACBROKE` - Unable to use broken heating/cooling equipment
+- `NOHEATEL`, `NOHEATNG`, `NOHEATBULK` - Heating fuel disruptions
+- `NOHEATDAYS`, `NOACDAYS` - Days without heating/cooling
+- `NOHEATHELP`, `NOACHELP` - Unable to get help with heating/cooling problems
+- `COLDMA`, `HOTMA` - Maintaining unsafe temperatures
+- `ENERGYASST` series - Receiving energy assistance programs
+
+**Identification Variables:**
+- `DOEID` - Unique household identifier
+- `state_name` - Geographic location
+
+#### Missing Data Imputation
+We employed **hot-deck imputation** to address missing values:
+
+1. **Matching Process**: Recipient households with missing values were matched to similar donor households with complete data
+2. **Range-based Imputation**: Square-footage range responses informed donor selection when available
+3. **Constraint Maintenance**: Imputed values were constrained within reported ranges to preserve data integrity
+
+This approach maintains distributional properties while respecting the relationship between range responses and precise measurements.
+
+## 2. PLACES: Census Tract Health Data
+
+### Dataset Description
+The PLACES dataset provides model-based census tract level estimates for the 2022 release in GIS-friendly format. Key features:
+
+- **Comprehensive Coverage**: All 50 states and District of Columbia
+- **Multiple Geographic Levels**: County, place, census tract, and ZIP Code Tabulation Areas
+- **Uniform Methodology**: Consistent estimation approach across all geographic levels
+- **CDC Partnership**: Developed by Centers for Disease Control and Prevention (CDC), Division of Population Health
+
+### Data Sources and Methodology
+The model-based estimates integrate:
+
+- **Behavioral Risk Factor Surveillance System (BRFSS)**: 2020 data for 25 measures, 2019 data for 4 biennial measures
+- **Census Bureau Data**: 2010 population estimates
+- **American Community Survey**: 2015–2019 estimates
+
+Funding support was provided by the Robert Wood Johnson Foundation in conjunction with the CDC Foundation.
+
+### Data Processing
+
+#### Variable Selection Strategy
+We focused on crude prevalence estimates while excluding confidence intervals to simplify analysis and visualization.
+
+#### Data Cleaning Protocol
+Our analysis revealed minimal missing data:
+
+- **Overall Missingness**: 2,235 out of 72,337 records (3.09%)
+- **Pattern Analysis**: Majority of missing cases (1,999 out of 2,235, 89.44%) lacked blood pressure and cholesterol measurements
+- **Decision Rationale**: Given the importance of cardiovascular measures for health analysis and the concentrated nature of missingness, we implemented complete-case analysis by removing all records with missing values
+
+### PLACES Dataset Variable Description
+
+#### Geographic Identifiers
+
+- **`tract_fips`**: Census tract FIPS code
+- **`state_desc`**: State name  
+- **`county_name`**: County name
+- **`county_fips`**: County FIPS code
+- **`total_population`**: Total population count for the tract
+- **`long`**: Longitude coordinate
+- **`lat`**: Latitude coordinate
+
+### Health Prevalence Measures (Crude %)
+
+#### Chronic Diseases
+- **`arthritis_crude_prev`**: Arthritis prevalence
+- **`bphigh_crude_prev`**: High blood pressure prevalence  
+- **`cancer_crude_prev`**: Cancer prevalence (excluding skin cancer)
+- **`casthma_crude_prev`**: Current asthma prevalence
+- **`chd_crude_prev`**: Coronary heart disease prevalence
+- **`copd_crude_prev`**: COPD prevalence
+- **`diabetes_crude_prev`**: Diabetes prevalence
+- **`highchol_crude_prev`**: High cholesterol prevalence
+- **`kidney_crude_prev`**: Kidney disease prevalence
+- **`stroke_crude_prev`**: Stroke prevalence
+
+#### Health Behaviors
+- **`binge_crude_prev`**: Binge drinking prevalence
+- **`csmoking_crude_prev`**: Current smoking prevalence
+- **`lpa_crude_prev`**: No leisure-time physical activity prevalence
+- **`obesity_crude_prev`**: Obesity prevalence
+- **`sleep_crude_prev`**: Insufficient sleep prevalence
+
+#### Mental Health
+- **`depression_crude_prev`**: Depression prevalence
+- **`mhlth_crude_prev`**: Poor mental health prevalence
+- **`phlth_crude_prev`**: Poor physical health prevalence
+- **`ghlth_crude_prev`**: Fair/poor general health prevalence
+
+#### Preventive Care
+- **`access2_crude_prev`**: No health insurance access prevalence
+- **`bpmed_crude_prev`**: Blood pressure medication usage
+- **`cervical_crude_prev`**: Cervical cancer screening prevalence
+- **`checkup_crude_prev`**: Routine health checkup prevalence
+- **`cholscreen_crude_prev`**: Cholesterol screening prevalence
+- **`colon_screen_crude_prev`**: Colorectal cancer screening prevalence
+- **`dental_crude_prev`**: Dental visits prevalence
+- **`mammouse_crude_prev`**: Mammography usage prevalence
+- **`corem_crude_prev`**: Core preventive services among men
+- **`corew_crude_prev`**: Core preventive services among women
+
+#### Oral Health
+- **`teethlost_crude_prev`**: All teeth lost prevalence
