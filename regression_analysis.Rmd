@@ -7,6 +7,7 @@ output:
     toc_float: true
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, warning = FALSE)
 ```
@@ -41,8 +42,6 @@ scale_fill_discrete = scale_fill_viridis_d
 ```{r, include=FALSE}
 set.seed(123)
 ```
-
-To build the regression model, I included `mean_mhlth`, `mean_depression`, `mean_access`, `mean_smoking`, `mean_binge`, `mean_sleep`, `mean_lpa`, `mean_diabetes`, `mean_bphigh`, `EI_proportion`, and `PO_proportion` because they represent key dimensions of community health, health behaviors, access to care, and socioeconomic conditions that are plausibly related to overall general health. Using these variables together helps capture multiple pathways influencing the outcome and reduces the risk of omitted-variable bias while improving the model’s explanatory power.
 
 ```{r, include=FALSE}
 # Merge the dataset for regression analysis.
@@ -100,10 +99,21 @@ regression_data =
 
 ```
 
-
 ### Multiple Linear Regression
 
-Fit the model
+First let's fit a simpe model of only `Energy Insecurity` and `Extended Power Outages`. 
+
+```{r}
+mlr_simple = lm(mean_glth ~  EI_proportion * PO_proportion, data = regression_data)
+
+summary(mlr_simple) |> 
+  broom::tidy(conf.int = TRUE) |> 
+  select(term, estimate, conf.low, conf.high, p.value) |> 
+  knitr::kable(digits = 3, caption = "MLR simple model")
+```
+
+More general full model.
+
 ```{r}
 mlr_fit =
   lm(mean_glth ~ mean_mhlth + mean_depression + mean_access +
@@ -114,7 +124,7 @@ mlr_fit =
 summary(mlr_fit) |> 
   broom::tidy(conf.int = TRUE) |> 
   select(term, estimate, conf.low, conf.high, p.value) |> 
-  knitr::kable(digits = 3)
+  knitr::kable(digits = 3 ,  caption = "MLR Full Model)")
 ```
 
 Check for key assumptions
@@ -139,11 +149,10 @@ p2 =
 p1 + p2
 ```
 
-The residuals appear randomly scattered around zero without a clear pattern, suggesting that the linearity and constant variance assumptions are reasonably satisfied.
+The linearity and constant variance assumptions are reasonably satisfied. Overall, the normality assumption is acceptable.
 
-Most points fall close to the reference line, indicating that the residuals are approximately normally distributed. A few deviations at the tails are expected with small samples (n = 50), but overall the normality assumption is acceptable.
+stepwise selection 
 
-After fitting the MLR model, we apply stepwise selection to efficiently identify the most informative predictors while keeping the key electricity variables in the model.
 ```{r}
 lower_model =
   lm(mean_glth ~ EI_proportion + PO_proportion,
@@ -162,13 +171,13 @@ summary(step_model) |>
   knitr::kable(digits = 3)
 ```
 
-The final model based on MLR results in:
+The final model based on MLR results in: Prevalence of fair/poor general health = -5.635 + 0.556 Prevalence of poor mental health - 0.115 Prevalence of insufficient sleep+ 0.226 Prevalence of no leisure-time physical activity + 0.744 Prevalence of diabetes + 13.841 Energy Insecurity proportion - 2.102 Power Outage proportion. 
 
 ### ELASTIC NET 
 
 Because our EDA shows that the two electricity variables are strongly correlated, the MLR model is likely to produce unstable estimates. Using Elastic Net helps prevent overfitting while simultaneously stabilizing the coefficient estimates and shrinking unnecessary parameters toward zero. Hence, we expec that this may leads to a more robust and interpretable model.
 
-We set $\alpha = 0.5$ to balance the Ridge and Lasso penalties within the Elastic Net framework. We then used `cv.glmnet()` to identify the optimal value of $\lambda$. This function performs 10-fold cross-validation by default, repeatedly splitting the data into ten parts, training the model on nine parts, and validating it on the remaining part to select the  $\lambda$ that minimizes the cross-validated error
+We set $\alpha = 0.5$ to balance the Ridge and Lasso penalties within the Elastic Net framework. We then used `cv.glmnet()` to identify the optimal value of $\lambda$. This function performs 10-fold cross-validation by default, repeatedly splitting the data into ten parts, training the model on nine parts, and validating it on the remaining part to select the  $\lambda$ that minimizes the cross-validated error.
 
 ```{r}
 y <- regression_data$mean_glth
@@ -197,15 +206,6 @@ rmse_en
 ```
 
 ### Cross Validation
-
-fit a base-level model that only depend on electronical variables. 
-
-```{r}
-mlr_basic =  lm(mean_glth ~EI_proportion * PO_proportion ,
-     data = regression_data)
-
-summary(mlr_basic) 
-```
 
 ```{r}
 cv_df =
