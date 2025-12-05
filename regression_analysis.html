@@ -769,7 +769,7 @@ data, providing more robust standard errors and confidence intervals.
 This helps us assess whether the model’s conclusions remain consistent
 across resampled datasets.</p>
 <pre class="r"><code>boot_straps = regression_data |&gt;
-    modelr::bootstrap(n = 10)
+    modelr::bootstrap(n = 5000)
 
 boot_results = boot_straps |&gt;
     mutate(models = map(strap, \(s) {
@@ -800,17 +800,17 @@ boot_se</code></pre>
 <pre><code>## # A tibble: 11 × 2
 ##    term             boot_se
 ##    &lt;chr&gt;              &lt;dbl&gt;
-##  1 EI_proportion   0.418   
-##  2 PO_proportion   0.260   
-##  3 mean_access     0.00360 
+##  1 EI_proportion   0.466   
+##  2 PO_proportion   0.328   
+##  3 mean_access     0.00374 
 ##  4 mean_binge      0       
-##  5 mean_bphigh     0.000640
-##  6 mean_depression 0.00118 
-##  7 mean_diabetes   0.0275  
-##  8 mean_lpa        0.00559 
-##  9 mean_mhlth      0.0145  
-## 10 mean_sleep      0.0209  
-## 11 mean_smoking    0.00785</code></pre>
+##  5 mean_bphigh     0.000639
+##  6 mean_depression 0.00201 
+##  7 mean_diabetes   0.0306  
+##  8 mean_lpa        0.00685 
+##  9 mean_mhlth      0.0162  
+## 10 mean_sleep      0.0227  
+## 11 mean_smoking    0.00901</code></pre>
 <p>The bootstrap results indicate notable differences in coefficient
 stability across predictors in the Elastic Net model. Most variables,
 such as mean_access, mean_binge, mean_bphigh, mean_mhlth, mean_sleep,
