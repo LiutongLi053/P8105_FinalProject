@@ -491,7 +491,22 @@ health_long =
     cols = -state_desc,
     names_to = "variable",
     values_to = "value"
-  )
+  )|>
+  mutate(
+    variable = stringr::str_remove(variable, "_crude_prev"),
+    variable = recode(
+      variable,
+      "mhlth"     = "Poor Mental Health",
+      "depression"= "Depression",
+      "access2"   = "No Healthcare Access",
+      "csmoking"  = "Current Smoking",
+      "binge"     = "Binge Drinking",
+      "sleep"     = "Insufficient Sleep",
+      "lpa"       = "Physical Inactivity",
+      "ghlth"     = "Poor General Health",
+      "diabetes"  = "Diabetes",
+      "bphigh"    = "High Blood Pressure"
+    ))
 
 # Plot the marginal distribution of each health indicator across census tracts
 ggplot(health_long, aes(x = value)) +
