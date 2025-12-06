@@ -835,7 +835,7 @@ visualization, and regression modeling</li>
 <h2>3. Exploratory Data Analysis</h2>
 <div id="energy-insecurity-distribution" class="section level3">
 <h3>3.1 Energy Insecurity Distribution</h3>
-<p><img src="Report_V4._files/figure-html/plot-ei-distribution-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-ei-distribution-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>Energy insecurity (EI) and extended power outages (PO) show
 substantial variation across U.S. states. The mean EI across states is
 25.6%, ranging from 15% to 40%. Similarly, PO averages 18.2% with a
@@ -850,8 +850,8 @@ hardship.</p>
 </div>
 <div id="relationship-between-ei-and-po" class="section level3">
 <h3>3.2 Relationship Between EI and PO</h3>
-<p><img src="Report_V4._files/figure-html/plot-ei-po-relationship-1.png" width="768" style="display: block; margin: auto;" /></p>
-<p><img src="Report_V4._files/figure-html/ei-po-regression-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-ei-po-relationship-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/ei-po-regression-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>A weak positive relationship exists between power outages and energy
 insecurity. The fitted regression yields R² = 0.149, showing that
 outages explain only a small share of EI variation. Some states with
@@ -864,7 +864,7 @@ variation.</p>
 </div>
 <div id="mental-health-distribution" class="section level3">
 <h3>3.3 Mental Health Distribution</h3>
-<p><img src="Report_V4._files/figure-html/plot-mental-health-dist-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-mental-health-dist-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>Before assessing broader health domains, mental health outcomes serve
 as an initial indicator to test whether energy hardship corresponds to
 population-level health burdens. Poor mental health prevalence ranges
@@ -880,7 +880,7 @@ levels of poor mental health.</p>
 <div id="energy-insecurity-and-mental-health-association"
 class="section level3">
 <h3>3.4 Energy Insecurity and Mental Health Association</h3>
-<p><img src="Report_V4._files/figure-html/plot-ei-mental-relationship-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-ei-mental-relationship-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>At the state level, EI is strongly positively associated with poor
 mental health. The correlation coefficient is ·r
 round(cor_test$estimate, 3)·, with p &lt; 0.001, suggesting a robust
@@ -894,7 +894,7 @@ linked to worse mental health outcomes across states.</p>
 <div id="distribution-of-health-indicators-across-census-tracts"
 class="section level3">
 <h3>3.5 Distribution of Health Indicators Across Census Tracts</h3>
-<p><img src="Report_V4._files/figure-html/health-indicators-analysis-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/health-indicators-analysis-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>Across census tracts, health indicators display substantial
 heterogeneity. Some—such as binge drinking or smoking—are tightly
 clustered, whereas others—such as healthcare access barriers or
@@ -908,7 +908,7 @@ health domains.</p>
 </div>
 <div id="health-indicators-across-ei-groups" class="section level3">
 <h3>3.6 Health Indicators Across EI Groups</h3>
-<p><img src="Report_V4._files/figure-html/plot-health-by-ei-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-health-by-ei-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>When states are grouped by EI tertiles, a clear gradient emerges.
 States in the High EI group consistently display worse outcomes across
 nearly all indicators—including smoking, binge drinking, insufficient
@@ -1097,7 +1097,7 @@ assumptions are reasonably satisfied.</p>
 residuals are approximately normally distributed. A few deviations at
 the tails are expected with small samples (n = 50), but overall the
 normality assumption is acceptable.</p>
-<p><img src="Report_V4._files/figure-html/unnamed-chunk-3-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/unnamed-chunk-3-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>After fitting the MLR model, we apply stepwise selection to
 efficiently identify the most informative predictors while keeping the
 key electricity variables in the model.</p>
@@ -1248,7 +1248,7 @@ Prevalence of high blood pressure + 10.817 Energy Insecurity proportion
 </div>
 <div id="model-comparison-via-cross-validation" class="section level3">
 <h3>4.4 Model Comparison via Cross-Validation</h3>
-<p><img src="Report_V4._files/figure-html/plot-model-comparison-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-model-comparison-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p><strong>Model Performance Summary:</strong> - <strong>Elastic
 Net</strong> achieves the lowest RMSE (most stable predictions) -
 <strong>Full MLR</strong> shows moderate performance with some
@@ -1265,7 +1265,7 @@ approximate the sampling distribution of key estimates directly from the
 data, providing more robust standard errors and confidence intervals.
 This helps us assess whether the model’s conclusions remain consistent
 across resampled datasets.</p>
-<p><img src="Report_V4._files/figure-html/plot-bootstrap-results-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="Report_V4_files/figure-html/plot-bootstrap-results-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p><strong>Bootstrap Findings:</strong> - <strong>EI_proportion</strong>
 and <strong>PO_proportion</strong> show large confidence intervals,
 indicating instability - all other vairables have more stable
