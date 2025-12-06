@@ -316,7 +316,7 @@ div#content {
 <!-- ===============  part1: Hero =============== -->
 
 <div class="fullscreen-bg">
-  <div class="bg-title">Energy Insecurity and Mental Health</div>
+  <div class="bg-title">Energy Insecurity and General Health Status</div>
 </div>
 <br>
 <br>
@@ -339,7 +339,7 @@ div#content {
     <td style="width:55%; padding:20px; vertical-align:top; 
                font-size:1.15em; line-height:1.7;">
        <br>
-    This project is motivated by a central question: **how do household energy challenges influence mental health across U.S. communities?** Energy insecurity — from difficulty affording utilities to living in unsafe indoor temperatures — can create chronic stress and shape overall wellbeing. Understanding this relationship is important for recognizing energy access not just as an economic issue, but as a meaningful public health concern.
+    This project is motivated by a central question: **how do household energy challenges influence general health status across U.S. communities?** Energy insecurity — from difficulty affording utilities to living in unsafe indoor temperatures — can create chronic stress and shape overall wellbeing. Understanding this relationship is important for recognizing energy access not just as an economic issue, but as a meaningful public health concern.
     We include two related indicators, **Energy Insecurity (EI)** and **extended Power Outages (PO)**, to help illustrate how energy vulnerability varies across states.
     Below, an interactive map allows you to explore EI and PO patterns across the United States.
     </td>
@@ -532,7 +532,7 @@ htmltools::div(
 <div class="card-content">
 <p>Our project begins with a clear research proposal outlining the key questions and scope.</p>
 <ul>
-<li><strong>Objective:</strong> To investigate the relationship between electricity insecurity and public mental health.</li>
+<li><strong>Objective:</strong> To investigate the relationship between electricity insecurity and general health status.</li>
 <li><strong>Hypothesis:</strong> Regions with unstable electricity supply may show higher incidence of specific health issues.</li>
 <li><strong>Methodology:</strong> A statisitcal method on a quantitative analysis.</li>
 </ul>
@@ -561,7 +561,7 @@ htmltools::div(
 <p>We gather and clean data from multiple sources to build a reliable dataset.</p>
 <ul>
 <li><strong>Sources:</strong> Energy records, public health databases.</li>
-<li><strong>Key variables:</strong> Energy insecurity conditions and population mental health outcomes.</li>
+<li><strong>Key variables:</strong> Energy insecurity conditions and general health status outcomes.</li>
 <li><strong>Tools:</strong> R for data wrangling and integration.</li>
 </ul>
 <p style="text-align:right; margin-top:15px;">
@@ -640,9 +640,9 @@ htmltools::div(
 <div class="card-toggle">⌄</div>
 </div>
 <div class="card-content">
-<p>The final report presents a clear narrative of our project, summarizing the motivation, methods, results, and key insights that link energy insecurity to mental health outcomes across the U.S.</p>
+<p>The final report presents a clear narrative of our project, summarizing the motivation, methods, results, and key insights that link energy insecurity to general health status outcomes across the U.S.</p>
 <p style="text-align:right; margin-top:15px;">
-  <a href="Report_v1.html" style="color:#3498db; font-weight:600; text-decoration:none;">
+  <a href="Report_v3.html" style="color:#3498db; font-weight:600; text-decoration:none;">
     Learn More →
   </a>
 </p>

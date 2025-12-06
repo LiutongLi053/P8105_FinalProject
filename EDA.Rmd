@@ -155,7 +155,7 @@ mental_summary =
   )
 ```
 
-Our research focuses on mental health, so I first examined the distributions of poor mental health and depression prevalence across census tracts. Both distributions are slightly skewed to the right and unimodal. The average prevalence of poor mental health is `r round(mental_summary$mean_mhlth, 3)`, ranging from `r mental_summary$range_mhlth`%. Depression shows a similar pattern, with an average prevalence of `r round(mental_summary$mean_dep, 3)` and a range of `r mental_summary$range_dep`%.
+Although our final analysis focuses on general health, mental health represents a key component of overall health and provides an informative starting point for exploratory analysis. Therefore, we first examine the distributions of poor mental health and depression prevalence across census tracts. Both variables exhibit slightly right-skewed, unimodal distributions. The average prevalence of poor mental health is `r round(mental_summary$mean_mhlth, 3)`, ranging from `r mental_summary$range_mhlth`%. Depression shows a similar pattern, with an average prevalence of `r round(mental_summary$mean_dep, 3)` and a range of `r mental_summary$range_dep`%.
 ```{r , echo=FALSE}
 plot_mhlth
 plot_depression
@@ -269,10 +269,10 @@ ggplot(ei_mh_prop_clean, aes(x = EI_proportion, y = mean_mhlth)) +
   theme_minimal()
 ```
 
-This simple regression supports a moderate positive association, which provides evidence supporting our initial expectation: states with higher energy insecurity tend to report higher levels of poor mental health, and the relationship is both statistically significant and practically meaningful.
-The model explains about 44% of the variation in poor mental health across states, suggesting that energy insecurity is a meaningful but not exclusive predictor.
+This simple regression reveals a moderate positive association, supporting our initial expectation that states with higher energy insecurity tend to report higher prevalence of poor mental health. The relationship is statistically significant and practically meaningful. Notably, because poor mental health is a key component of overall general health, this pattern also suggests a broader connection: states facing greater energy insecurity may experience wider declines in overall health. The model explains about 44% of the variation in poor mental health across states, indicating that energy insecurity is important but not the sole contributor to population health outcomes.
 
 # EDA for other health related variables
+
 Given the clear association observed between energy insecurity and poor mental health, it is reasonable to ask whether similar patterns exist for other health-related measures. 
 To explore this possibility, I also conducted a brief examination of additional health indicators available in the PLACES dataset, including mhlth_crude_prev, depression_crude_prev, access2_crude_prev, csmoking_crude_prev, binge_crude_prev, sleep_crude_prev, lpa_crude_prev, ghlth_crude_prev, diabetes_crude_prev, and bphigh_crude_prev.
 

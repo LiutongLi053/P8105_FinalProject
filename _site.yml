@@ -15,7 +15,7 @@ navbar:
     - text: "Regression"
       href: regression_analysis.html
     - text: "Report"
-      href: Report_v1.html
+      href: Report_v3.html
     - text: "shiny"
       href: https://haoyang.shinyapps.io/shiny/
     - icon: fa-brands fa-youtube
