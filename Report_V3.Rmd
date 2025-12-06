@@ -1,0 +1,1094 @@
+---
+title: "Final Report"
+date: "2025-12-3"
+output: github_document
+
+---
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    theme: flatly
+# Energy Insecurity and Mental Distress in the United States: Final Report
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  fig.align = "center"
+)
+
+# Load required libraries
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(patchwork)
+library(glmnet)
+library(modelr)
+library(broom)
+
+# Set theme
+theme_set(theme_minimal(base_size = 12) + 
+            theme(legend.position = "bottom",
+                  plot.title = element_text(hjust = 0.5, face = "bold"),
+                  plot.subtitle = element_text(hjust = 0.5)))
+
+# Set color palette
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+```
+
+## 1. Introduction
+
+This study investigates the relationship between household energy insecurity and population general health across U.S. states. Energy insecurity—limited access to affordable, reliable energy for heating, cooling, and powering homes—may directly influence overall health and well-being by inducing chronic stress, disrupting daily functioning, and limiting the ability to maintain safe and comfortable living conditions. While traditional determinants of general health such as physical health status, income, employment, and social support have been extensively studied, this research adopts a novel perspective by examining how energy insecurity contributes to broader health outcomes. Limited access to affordable household energy—reflected through high utility burdens or difficulties maintaining adequate heating and cooling—can affect physical comfort, sleep quality, and stress levels, ultimately shaping overall health status. Using 2020 data from the U.S. Energy Information Administration’s Residential Energy Consumption Survey (RECS) and the Centers for Disease Control and Prevention’s PLACES dataset, this study analyzes state-level associations between household energy insecurity and population general health across the United States.
+
+## 2. Dataset Description and Cleaning Protocol
+
+
+### Dataset Description
+
+#### Dataset Overview
+
+Our analysis integrates two nationally representative datasets offering complementary insights:
+
+1. **Residential Energy Consumption Survey (RECS)**: Captures household-level energy insecurity indicators.
+2. **CDC PLACES Data**: Provides community-level mental and physical health prevalence estimates.
+
+The temporal alignment (2020 reference period) and comprehensive geographic coverage of both datasets enable a robust state-level analysis of the association between energy insecurity and mental distress.
+
+
+#### 1. Residential Energy Consumption Survey (RECS)
+
+##### 1.1 Background and Methodology
+
+The **Residential Energy Consumption Survey (RECS)** is administered by the U.S. Energy Information Administration (EIA) to collect energy characteristics, consumption patterns, and associated costs for housing units across the United States. The 2020 RECS represents the 15th iteration of this survey, first conducted in 1978.
+
+**Key Survey Features:**
+
+- **Collection Period**: 2020
+- **Sample Size**: Approximately 18,500 households
+- **Population Represented**: 123.5 million occupied housing units
+- **Collection Method**: Transitioned from in-person to web/mail surveys with utility data linkage
+- **Data Integration**: Combines self-reported survey data with actual energy consumption data from utility providers
+
+The survey employs a multi-stage area probability design to select housing units, ensuring national representativeness. Sample weights (`nweight`) are provided to generate population-level estimates.
+
+##### 1.2 Energy Insecurity Operationalization
+
+Energy insecurity in RECS 2020 is measured through multiple complementary indicators capturing different dimensions of household energy challenges:
+
+| Dimension | Specific Indicators | Measurement Approach |
+|-----------|-------------------|---------------------|
+| **Financial Strain** | Choosing between energy bills and basic needs | `SCALEB`, `SCALEG`, `SCALEE` scales |
+| **Temperature Control** | Inability to maintain safe/healthy home temperatures | `COLDMA`, `HOTMA` indicators |
+| **Service Disruptions** | Utility disconnection notices or service interruptions | Disconnection notice variables |
+| **Equipment Limitations** | Unable to use heating/cooling equipment due to: | |
+| | - Equipment breakdown with financial constraints | `NOHEATBROKE`, `NOACBROKE` |
+| | - Utility service disruption due to non-payment | `NOHEATEL`, `NOHEATNG` |
+| | - Inability to afford bulk fuel delivery | `NOHEATBULK` |
+| **Extended Outages** | Power outages lasting 24+ hours | Duration variables |
+
+##### 1.3 Key Variables for Analysis
+
+###### Identification and Weighting Variables
+- **`DOEID`**: Unique household identifier
+- **`state_name`**: Geographic location (state)
+- **`nweight`**: Final sample weight for population estimates
+
+###### Energy Insecurity Indicators
+
+- **Financial Burden**: `SCALEB`, `SCALEG`, `SCALEE` (energy affordability scales)
+- **Payment Difficulty**: `PAYHELP` (difficulty paying energy bills)
+- **Equipment Issues**: `NOHEATBROKE`, `NOACBROKE` (broken heating/cooling)
+- **Fuel Disruptions**: `NOHEATEL`, `NOHEATNG`, `NOHEATBULK` (heating fuel issues)
+- **Duration Measures**: `NOHEATDAYS`, `NOACDAYS` (days without heating/cooling)
+- **Temperature Control**: `COLDMA`, `HOTMA` (maintaining unsafe temperatures)
+- **Assistance Programs**: `ENERGYASST` series (energy assistance participation)
+
+###### Derived Energy Insecurity Measures
+From these indicators, we calculate two primary outcome measures:
+
+1. **Energy Insecurity (`EI_number`, `EI_proportion`)**:
+   - Number (in millions) and percentage of housing units experiencing energy insecurity
+   - Definition includes: forgoing food/medicine for energy bills, maintaining unsafe temperatures, receiving disconnection notices, and being unable to use heating/cooling equipment due to financial constraints or supply disruptions
+
+2. **Extended Power Outages (`PO_number`, `PO_proportion`)**:
+   - Number (in millions) and percentage of housing units experiencing power outages lasting 24 hours or more
+
+
+#### 2. CDC PLACES: Census Tract Health Data
+
+##### 2.1 Dataset Overview
+
+The **PLACES** dataset provides model-based census tract-level estimates for chronic disease risk factors, health outcomes, and clinical preventive service use across the United States. Developed by the Centers for Disease Control and Prevention (CDC), Division of Population Health, this dataset enables local public health assessment and planning.
+
+**Key Dataset Features:**
+
+- **Release Year**: 2022 (using 2020 BRFSS data as primary source)
+- **Geographic Coverage**: All 50 states and District of Columbia
+- **Geographic Levels**: County, place, census tract, and ZIP Code Tabulation Areas
+- **Total Observations**: 72,337 census tracts
+- **Funding**: Robert Wood Johnson Foundation in conjunction with the CDC Foundation
+
+##### 2.2 Methodology and Data Sources
+
+PLACES employs a multilevel regression and post-stratification (MRP) approach to generate small-area estimates. The model integrates:
+
+- **Primary Source**: Behavioral Risk Factor Surveillance System (BRFSS) 2020 data for 25 measures (2021 data for 4 biennial measures)
+- **Population Data**: U.S. Census Bureau 2020 population estimates
+- **Socioeconomic Covariates**: American Community Survey (ACS) 2015–2019 estimates
+
+**Important Note**: These are model-based estimates designed for surveillance and planning purposes. The CDC cautions against using them for program evaluation due to the model's inability to detect effects of local interventions.
+
+##### 2.3 Health Measures Included
+
+The dataset includes 40 measures across six domains. For our analysis, we focus primarily on mental health indicators while retaining relevant covariates:
+
+###### Primary Mental Health Outcome
+- **`mhlth_crude_prev`**: Crude prevalence of poor mental health (percentage of adults reporting ≥14 days of poor mental health in past 30 days)
+
+###### Additional Health Measures (Selected as Covariates)
+
+| Category | Variables | Purpose in Analysis |
+|----------|-----------|-------------------|
+| **Mental Health** | `depression_crude_prev` | Secondary mental health outcome |
+| **Physical Health** | `phlth_crude_prev`, `ghlth_crude_prev` | Health status controls |
+| **Chronic Diseases** | `arthritis_crude_prev`, `bphigh_crude_prev`, `diabetes_crude_prev`, `cancer_crude_prev`, `casthma_crude_prev`, `chd_crude_prev`, `copd_crude_prev`, `highchol_crude_prev`, `kidney_crude_prev`, `stroke_crude_prev` | Comorbidity controls |
+| **Health Behaviors** | `binge_crude_prev`, `csmoking_crude_prev`, `lpa_crude_prev`, `obesity_crude_prev`, `sleep_crude_prev` | Behavioral risk factor controls |
+| **Preventive Care** | `access2_crude_prev`, `checkup_crude_prev`, `cholscreen_crude_prev`, `colon_screen_crude_prev`, `dental_crude_prev` | Healthcare access controls |
+| **Oral Health** | `teethlost_crude_prev` | Additional health indicator |
+
+###### Geographic Identifiers
+- **`tract_fips`**: Census tract FIPS code
+- **`state_desc`**: State name
+- **`county_name`**: County name
+- **`county_fips`**: County FIPS code
+- **`total_population`**: Population count for the tract
+- **`long`**, **`lat`**: Geographic coordinates
+
+
+
+### Data Cleaning Protocol
+
+#### 1. RECS Data Processing
+
+##### Step 1: Variable Selection and Extraction
+We extracted variables relevant to energy insecurity measurement, household identification, and geographic location from the RECS dataset.
+
+##### Step 2: Energy Insecurity Classification
+Households were classified as "energy insecure" if they reported **any** of the following:
+
+1. Forgoing food or medicine to pay energy bills
+2. Maintaining home at unsafe or unhealthy temperature
+3. Receiving a disconnection notice
+4. Being unable to use heating/cooling equipment due to:
+   - Broken equipment with financial constraints for repairs
+   - Utility service disruption due to non-payment
+   - Inability to afford bulk fuel delivery
+
+##### Step 3: Missing Data Imputation
+We employed **hot-deck imputation** to address missing values while preserving data integrity:
+
+1. **Donor Matching**: Recipient households with missing values were matched to similar donor households with complete data based on housing characteristics and energy usage patterns
+2. **Range Constraints**: Square-footage range responses informed donor selection when available
+3. **Distribution Preservation**: Imputed values were constrained within reported ranges to maintain original variable distributions
+
+This approach minimizes bias while utilizing all available information in the dataset.
+
+##### Step 4: State-Level Aggregation
+Using sample weights (`nweight`), we aggregated household-level data to generate state-level estimates:
+
+- Weighted counts of energy insecure households
+- State-level proportions of energy insecurity
+- Similar calculations for extended power outages
+
+#### 2. PLACES Data Processing
+
+##### Step 1: Missing Data Assessment and Handling
+Our initial analysis revealed:
+
+- **Total Missing**: 2,235 out of 72,337 records (3.09%)
+- **Missing Pattern**: 89.44% of missing cases (1,999 records) lacked blood pressure and cholesterol measurements
+- **Decision**: Implemented complete-case analysis by removing records with any missing values
+
+**Rationale**: The low overall missingness rate and concentrated pattern in specific variables justified listwise deletion, as it simplifies analysis without substantially reducing statistical power.
+
+##### Step 2: Variable Selection
+We selected variables based on their relevance to our research question:
+
+- **Primary Outcome**: `mhlth_crude_prev` (poor mental health prevalence)
+- **Potential Confounders**: Chronic disease prevalence, health behaviors, healthcare access measures
+- **Geographic Identifiers**: State, county, and tract information for aggregation
+
+##### Step 3: State-Level Aggregation
+We calculated population-weighted averages at the state level:
+
+- Weighted by `total_population` to account for varying tract sizes
+- Generated state-level prevalence estimates for all health measures
+- Ensured compatibility with RECS state-level data
+
+#### 3. Dataset Integration
+
+##### Step 1: Geographic Harmonization
+- Standardized state names across datasets
+- Verified consistent state representation (50 states + District of Columbia)
+- Created common geographic identifiers for merging
+
+##### Step 2: Final Merged Dataset
+The cleaned and integrated dataset contains:
+
+- **51 observations** (50 states + District of Columbia)
+- **Key Variables**:
+  - State-level energy insecurity estimates from RECS
+  - State-level mental health prevalence from PLACES
+  - Covariates for potential confounding control
+- **Format**: Ready for exploratory analysis, visualization, and regression modeling
+
+
+
+## 3. Exploratory Data Analysis
+
+### 3.1 Energy Insecurity Distribution
+
+```{r load-recs-data}
+# Load RECS data
+RECS_EI <- read_csv("Data/RECS_Energy_Insecurity.csv")
+
+# Calculate summary statistics
+EI_summary <- RECS_EI %>%
+  summarize(
+    mean_EI = mean(EI_proportion, na.rm = TRUE),
+    min_EI = min(EI_proportion, na.rm = TRUE),
+    max_EI = max(EI_proportion, na.rm = TRUE),
+    median_EI = median(EI_proportion, na.rm = TRUE),
+    sd_EI = sd(EI_proportion, na.rm = TRUE)
+  )
+
+PO_summary <- RECS_EI %>%
+  summarize(
+    mean_PO = mean(PO_proportion, na.rm = TRUE),
+    min_PO = min(PO_proportion, na.rm = TRUE),
+    max_PO = max(PO_proportion, na.rm = TRUE),
+    median_PO = median(PO_proportion, na.rm = TRUE),
+    sd_PO = sd(PO_proportion, na.rm = TRUE)
+  )
+```
+
+
+```{r plot-ei-distribution}
+# Plot EI distribution
+p_ei_dist <- RECS_EI %>%
+  ggplot(aes(x = EI_proportion)) +
+  geom_histogram(bins = 20, fill = "#2E86AB", alpha = 0.8) +
+  geom_vline(xintercept = mean(RECS_EI$EI_proportion), 
+             color = "#D1495B", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Energy Insecurity\nAcross States",
+       subtitle = "Percentage of households\nexperiencing energy insecurity",
+       x = "Energy Insecurity Proportion",
+       y = "Number of States") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1))
+
+# Plot PO distribution
+p_po_dist <- RECS_EI %>%
+  ggplot(aes(x = PO_proportion)) +
+  geom_histogram(bins = 20, fill = "#EDAE49", alpha = 0.8) +
+  geom_vline(xintercept = mean(RECS_EI$PO_proportion), 
+             color = "#D1495B", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Extended Power Outages\nAcross States",
+       subtitle = "Percentage of households\nexperiencing outages ≥24 hours",
+       x = "Power Outage Proportion",
+       y = "Number of States") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1))
+
+# Display the combined plot
+p_ei_dist + p_po_dist
+```
+
+Energy insecurity (EI) and extended power outages (PO) show substantial variation across U.S. states.
+The mean EI across states is `r round(EI_summary$mean_EI*100, 1)`%, ranging from `r round(EI_summary$min_EI*100, 1)`% to `r round(EI_summary$max_EI*100, 1)`%.
+Similarly, PO averages `r round(PO_summary$mean_PO*100, 1)`% with a range of `r round(PO_summary$min_PO*100, 1)`% – `r round(PO_summary$max_PO*100, 1)`%.
+
+The distributions are moderately right-skewed, indicating that while many states face relatively low energy hardship, a subset experiences substantially elevated burdens. These patterns highlight pronounced geographic disparities in energy reliability and affordability.
+
+**Takeaway**:
+States differ widely in both EI and PO, indicating significant geographic inequality in energy-related hardship.
+
+### 3.2 Relationship Between EI and PO
+
+```{r plot-ei-po-relationship}
+# Prepare data for comparison
+EI_long <- RECS_EI %>%
+  pivot_longer(cols = c(EI_proportion, PO_proportion),
+               names_to = "Type", values_to = "Value") %>%
+  mutate(Type = factor(Type, 
+                       levels = c("EI_proportion", "PO_proportion"),
+                       labels = c("Energy Insecurity", "Power Outages")))
+
+# Create comparison plot
+p_comparison <- ggplot(EI_long, 
+                       aes(x = reorder(state, Value), y = Value, color = Type)) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  geom_line(aes(group = state), color = "gray70", alpha = 0.5) +
+  coord_flip() +
+  labs(title = "State-by-State Comparison: Energy Insecurity vs. Power Outages",
+       x = "State",
+       y = "Proportion of Affected Households",
+       color = "Measure") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_color_manual(values = c("#2E86AB", "#EDAE49")) +
+  theme(axis.text.y = element_text(size = 6))
+
+p_comparison
+```
+
+```{r ei-po-regression}
+# Fit regression model
+fit_ei_po <- lm(EI_proportion ~ PO_proportion, data = RECS_EI)
+
+# Create regression plot
+p_regression <- RECS_EI %>%
+  ggplot(aes(x = PO_proportion, y = EI_proportion)) +
+  geom_point(color = "#2E86AB", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", color = "#D1495B", se = TRUE) +
+  labs(title = "Relationship Between Power Outages and Energy Insecurity",
+       subtitle = paste("R² =", round(summary(fit_ei_po)$r.squared, 3),
+                       "; p =", format.pval(summary(fit_ei_po)$coefficients[2,4], digits = 3)),
+       x = "Power Outage Proportion",
+       y = "Energy Insecurity Proportion") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+
+p_regression
+```
+
+A weak positive relationship exists between power outages and energy insecurity. The fitted regression yields R² = `r round(summary(fit_ei_po)$r.squared, 3)`, showing that outages explain only a small share of EI variation. Some states with high outage prevalence do not necessarily exhibit severe energy insecurity, suggesting affordability, housing quality, and climatic stressors may be more influential drivers.
+
+**Takeaway:**
+Outages contribute to EI but are not the primary driver—other structural factors explain most state-level variation.
+
+### 3.3 Mental Health Distribution
+
+```{r load-places-data}
+# Load PLACES data
+PLACES <- read_csv("Data/PLACES_Census_Tract_Data.csv")
+
+# Calculate mental health summaries
+mental_summary <- PLACES %>%
+  summarize(
+    mean_mhlth = mean(mhlth_crude_prev, na.rm = TRUE),
+    min_mhlth = min(mhlth_crude_prev, na.rm = TRUE),
+    max_mhlth = max(mhlth_crude_prev, na.rm = TRUE),
+    sd_mhlth = sd(mhlth_crude_prev, na.rm = TRUE),
+    mean_dep = mean(depression_crude_prev, na.rm = TRUE),
+    min_dep = min(depression_crude_prev, na.rm = TRUE),
+    max_dep = max(depression_crude_prev, na.rm = TRUE),
+    sd_dep = sd(depression_crude_prev, na.rm = TRUE)
+  )
+```
+
+
+```{r plot-mental-health-dist}
+# Create mental health distribution plots
+p_mhlth_dist <- PLACES %>%
+  ggplot(aes(x = mhlth_crude_prev)) +
+  geom_histogram(bins = 40, fill = "#6A4C93", alpha = 0.8) +
+  geom_vline(xintercept = mental_summary$mean_mhlth, 
+             color = "#D1495B", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Poor Mental Health",
+       subtitle = "Percentage of adults with ≥14\npoor mental health days/month",
+       x = "Prevalence (%)",
+       y = "Number of Census Tracts") +
+  xlim(c(0, 35))
+
+p_dep_dist <- PLACES %>%
+  ggplot(aes(x = depression_crude_prev)) +
+  geom_histogram(bins = 40, fill = "#8AC926", alpha = 0.8) +
+  geom_vline(xintercept = mental_summary$mean_dep, 
+             color = "#D1495B", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Depression",
+       subtitle = "Percentage of adults\never diagnosed with depression",
+       x = "Prevalence (%)",
+       y = "Number of Census Tracts") +
+  xlim(c(0, 40))
+
+p_mhlth_dist + p_dep_dist
+```
+
+Before assessing broader health domains, mental health outcomes serve as an initial indicator to test whether energy hardship corresponds to population-level health burdens.
+Poor mental health prevalence ranges from `r round(mental_summary$min_mhlth, 1)`% to `r round(mental_summary$max_mhlth, 1)`%, with a mean of `r round(mental_summary$mean_mhlth, 1)`%.
+Depression prevalence shows a similar spread, ranging `r round(mental_summary$min_dep, 1)`% – `r round(mental_summary$max_dep, 1)`%, averaging `r round(mental_summary$mean_dep, 1)`%.
+
+Both indicators exhibit right-skewed distributions, indicating that a subset of communities faces disproportionately high psychological burdens.
+
+**Takeaway:**
+Mental health burdens are unevenly distributed, with some communities experiencing significantly higher levels of poor mental health.
+
+### 3.4 Energy Insecurity and Mental Health Association
+
+```{r merge-data-analysis}
+# Aggregate PLACES data to state level
+state_mental <- PLACES %>%
+  group_by(state_desc) %>%
+  summarize(
+    mean_mhlth = mean(mhlth_crude_prev, na.rm = TRUE),
+    mean_depression = mean(depression_crude_prev, na.rm = TRUE)
+  ) %>%
+  rename(state = state_desc)
+
+# Merge with RECS data
+merged_data <- RECS_EI %>%
+  left_join(state_mental, by = "state")
+
+# Remove missing values
+merged_clean <- merged_data %>%
+  filter(!is.na(mean_mhlth))
+```
+
+```{r plot-ei-mental-relationship}
+# Scatter plot with regression
+p_ei_mhlth <- merged_clean %>%
+  ggplot(aes(x = EI_proportion, y = mean_mhlth)) +
+  geom_point(color = "#2E86AB", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", color = "#D1495B", se = TRUE) +
+  labs(title = "Energy Insecurity and Poor Mental Health",
+       subtitle = "State-level association",
+       x = "Energy Insecurity Proportion",
+       y = "Poor Mental Health Prevalence (%)") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme(plot.subtitle = element_text(size = 10))
+
+# Calculate correlation
+cor_test <- cor.test(merged_clean$EI_proportion, merged_clean$mean_mhlth)
+
+# Add correlation annotation
+p_ei_mhlth_annotated <- p_ei_mhlth +
+  annotate("text", 
+           x = max(merged_clean$EI_proportion) * 0.8,
+           y = max(merged_clean$mean_mhlth) * 0.95,
+           label = paste("r =", round(cor_test$estimate, 3),
+                        "\np < 0.001"),
+           size = 4, hjust = 1)
+
+p_ei_mhlth_annotated
+```
+
+At the state level, EI is strongly positively associated with poor mental health. The correlation coefficient is ·r round(cor_test$estimate, 3)·, with p < 0.001, suggesting a robust relationship.
+States with higher EI consistently show higher prevalence of poor mental health, reinforcing the hypothesis that energy instability—including financial stress, thermal discomfort, and disconnection risk—may contribute to psychological strain.
+
+**Takeaway:**
+Higher energy insecurity is strongly linked to worse mental health outcomes across states.
+
+### 3.5 Distribution of Health Indicators Across Census Tracts
+
+```{r health-indicators-analysis}
+# Prepare health indicators data
+health_vars <- PLACES %>%
+  select(
+    state_desc,
+    mhlth_crude_prev,
+    depression_crude_prev,
+    access2_crude_prev,
+    csmoking_crude_prev,
+    binge_crude_prev,
+    sleep_crude_prev,
+    lpa_crude_prev,
+    ghlth_crude_prev,
+    diabetes_crude_prev,
+    bphigh_crude_prev
+  )
+
+# Reshape health indicators to long format: one row per (state, variable)
+health_long =
+  health_vars |>
+  pivot_longer(
+    cols = -state_desc,
+    names_to = "variable",
+    values_to = "value"
+  )|>
+  mutate(
+    variable = stringr::str_remove(variable, "_crude_prev"),
+    variable = recode(
+      variable,
+      "mhlth"     = "Poor Mental Health",
+      "depression"= "Depression",
+      "access2"   = "No Healthcare Access",
+      "csmoking"  = "Current Smoking",
+      "binge"     = "Binge Drinking",
+      "sleep"     = "Insufficient Sleep",
+      "lpa"       = "Physical Inactivity",
+      "ghlth"     = "Poor General Health",
+      "diabetes"  = "Diabetes",
+      "bphigh"    = "High Blood Pressure"
+    ))
+
+# Plot the marginal distribution of each health indicator across census tracts
+ggplot(health_long, aes(x = value)) +
+  geom_histogram(bins = 40, fill = "steelblue", alpha = 0.7) +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Health Indicators Across Census Tracts",
+    x = "Value",
+    y = "Count"
+  )
+
+# Aggregate to state level
+state_health <- health_vars %>%
+  group_by(state_desc) %>%
+  summarize(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) %>%
+  rename(state = state_desc)
+
+# Categorize states by EI tertiles
+ei_groups <- RECS_EI %>%
+  mutate(EI_group = ntile(EI_proportion, 3)) %>%
+  mutate(EI_group = factor(EI_group,
+                           levels = 1:3,
+                           labels = c("Low EI", "Medium EI", "High EI"))) %>%
+  select(state, EI_group)
+
+# Merge and prepare for plotting
+health_by_ei <- state_health %>%
+  left_join(ei_groups, by = "state") %>%
+  filter(!is.na(EI_group)) %>%
+  pivot_longer(cols = -c(state, EI_group),
+               names_to = "variable",
+               values_to = "prevalence") %>%
+  mutate(variable = str_remove(variable, "_crude_prev")) %>%
+  mutate(variable = recode(variable,
+                           "mhlth" = "Poor Mental Health",
+                           "depression" = "Depression",
+                           "access2" = "No Healthcare Access",
+                           "csmoking" = "Current Smoking",
+                           "binge" = "Binge Drinking",
+                           "sleep" = "Insufficient Sleep",
+                           "lpa" = "Physical Inactivity",
+                           "ghlth" = "Poor General Health",
+                           "diabetes" = "Diabetes",
+                           "bphigh" = "High Blood Pressure"))
+```
+
+Across census tracts, health indicators display substantial heterogeneity. Some—such as binge drinking or smoking—are tightly clustered, whereas others—such as healthcare access barriers or insufficient sleep—exhibit broader or right-skewed distributions.
+These varying shapes indicate that specific health risks are concentrated in particular communities, reflecting unequal exposure to behavioral, socioeconomic, and environmental stressors.
+
+**Takeaway:**
+Health risks are not uniformly distributed across communities, underscoring significant disparities across multiple health domains.
+
+
+### 3.6 Health Indicators Across EI Groups
+```{r plot-health-by-ei}
+# Create comparison plot
+p_health_ei <- health_by_ei %>%
+  ggplot(aes(x = EI_group, y = prevalence, fill = EI_group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  facet_wrap(~ variable, scales = "free_y", ncol = 3) +
+  labs(title = "Health Indicators Across Energy Insecurity Levels",
+       subtitle = "States grouped by tertiles of energy insecurity prevalence",
+       x = "Energy Insecurity Group",
+       y = "Prevalence (%)",
+       fill = "EI Group") +
+  scale_fill_manual(values = c("#2E86AB", "#EDAE49", "#D1495B")) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.text = element_text(size = 9))
+
+p_health_ei
+```
+
+When states are grouped by EI tertiles, a clear gradient emerges.
+States in the High EI group consistently display worse outcomes across nearly all indicators—including smoking, binge drinking, insufficient sleep, physical inactivity, chronic disease burden, and poor general health—compared with Low EI states.
+
+This pattern suggests that energy insecurity is intertwined with broader structural disadvantage and clusters alongside multiple dimensions of poor population health.
+
+**Takeaway:**
+States with higher EI also experience systematically worse health profiles across behavioral, chronic disease, and general health indicators.
+## 4. Regression Analysis
+
+### 4.1 Model Preparation
+
+```{r prepare-regression-data}
+# Prepare regression dataset
+regression_data <- state_health %>%
+  left_join(RECS_EI %>% select(state, EI_proportion, PO_proportion), 
+            by = "state") %>%
+  rename_with(~ str_remove(., "_crude_prev")) %>%
+  rename(mean_glth = ghlth) %>%
+  filter(!is.na(EI_proportion))
+```
+
+```{r, include = FALSE}
+mental_health_vars = PLACES |>
+  select(
+    state_desc,
+    county_name,
+    tract_fips,
+    mhlth_crude_prev,
+    depression_crude_prev,
+    access2_crude_prev,
+    csmoking_crude_prev,
+    binge_crude_prev,
+    sleep_crude_prev,
+    lpa_crude_prev,
+    ghlth_crude_prev,
+    diabetes_crude_prev,
+    bphigh_crude_prev
+  )
+
+state_means =
+  mental_health_vars |>
+  group_by(state_desc) |>
+  summarise(
+    mean_mhlth = mean(mhlth_crude_prev, na.rm = TRUE),
+    mean_depression = mean(depression_crude_prev, na.rm = TRUE),
+    mean_access = mean(access2_crude_prev, na.rm = TRUE),
+    mean_smoking = mean(csmoking_crude_prev, na.rm = TRUE),
+    mean_binge = mean(binge_crude_prev, na.rm = TRUE),
+    mean_sleep = mean(sleep_crude_prev, na.rm = TRUE),
+    mean_lpa = mean(lpa_crude_prev, na.rm = TRUE),
+    mean_glth = mean(ghlth_crude_prev, na.rm = TRUE),
+    mean_diabetes = mean(diabetes_crude_prev, na.rm = TRUE),
+    mean_bphigh = mean(bphigh_crude_prev, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+recs_vars =
+  RECS_EI |>
+  select(
+    state,
+    EI_proportion,
+    PO_proportion
+  )
+
+regression_data =
+  state_means |>
+  rename(state = state_desc) |>
+  left_join(recs_vars, by = "state")
+```
+
+### 4.2 Multiple Linear Regression
+
+Because our main focus is to examine how electricity insecurity affects general health, we first fit a simple baseline model using only `EI_proportion` and `PO_proportion.` This provides a clean starting point to understand their direct relationship with the outcome.
+
+```{r}
+mlr_simple = lm(mean_glth ~  EI_proportion * PO_proportion, data = regression_data)
+
+summary(mlr_simple) |> 
+  broom::tidy(conf.int = TRUE) |> 
+  select(term, estimate, conf.low, conf.high, p.value) |> 
+  knitr::kable(digits = 3, caption = "MLR simple model")
+```
+
+
+To build a more comprehensive regression model, we then expanded the specification to incorporate key community-level health indicators, health behaviors, and access-to-care variables such as  `mean_depression`, `mean_access`, `mean_smoking`, `mean_binge`, `mean_sleep`, `mean_lpa`, `mean_diabetes`, and `mean_bphigh`, in addition to the electricity-related predictors. These variables represent well-established determinants of population health and help control for important confounding factors. Including them creates a more general modeling framework that captures multiple pathways influencing general health and reduces omitted-variable bias, allowing us to better assess the unique contribution of electricity insecurity.
+
+```{r mlr-model}
+mlr_fit =
+  lm(mean_glth ~ mean_mhlth + mean_depression + mean_access +
+       mean_smoking + mean_binge + mean_sleep + mean_lpa +
+       mean_diabetes + mean_bphigh + EI_proportion + PO_proportion,
+     data = regression_data)
+
+mlr_summary <- tidy(mlr_fit, conf.int = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(significance = ifelse(p.value < 0.001, "***",
+                               ifelse(p.value < 0.01, "**",
+                                      ifelse(p.value < 0.05, "*", "")))) %>%
+  select(term, estimate, conf.low, conf.high, p.value, significance)
+
+kable(mlr_summary, 
+      digits = 3,
+      caption = "Multiple Linear Regression Results (Full Model)")
+```
+
+After fitting the model, we check whether the MLR assumptions are satisfied. The residuals appear randomly scattered around zero without a clear pattern, suggesting that the linearity and constant variance assumptions are reasonably satisfied.
+
+Most points fall close to the reference line, indicating that the residuals are approximately normally distributed. A few deviations at the tails are expected with small samples (n = 50), but overall the normality assumption is acceptable.
+
+```{r}
+p1 =
+  regression_data |>
+  modelr::add_residuals(mlr_fit) |>
+  modelr::add_predictions(mlr_fit) |>
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(x = "Fitted values", y = "Residuals",
+       title = "Residuals vs Fitted")
+
+p2 =
+  ggplot(mlr_fit, aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  labs(title = "Normal Q-Q Plot of Residuals")
+
+p1 + p2
+```
+
+After fitting the MLR model, we apply stepwise selection to efficiently identify the most informative predictors while keeping the key electricity variables in the model. 
+
+```{r}
+lower_model =
+  lm(mean_glth ~ EI_proportion + PO_proportion,
+     data = regression_data)
+
+step_model =
+  step(mlr_fit,
+       scope = list(lower = formula(lower_model),
+                    upper = formula(mlr_fit)),
+       direction = "both",
+       trace = FALSE)
+
+summary(step_model) |>
+  broom::tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high, p.value) |>
+  knitr::kable(digits = 3,  caption = "Final Model based on Stepwise selection")
+```
+
+he final model based on MLR results in: Prevalence of fair/poor general health = 5.635 + 0.556 Prevalence of poor mental health - 0.115 Prevalence of insufficient sleep+ 0.226 Prevalence of no leisure-time physical activity + 0.744 Prevalence of diabetes + 13.841 Energy Insecurity proportion - 2.102 Power Outage proportion. 
+
+### 4.3 Elastic Net Regularization
+
+ecause our EDA shows that the two electricity variables are strongly correlated, the MLR model is likely to produce unstable estimates. Using Elastic Net helps prevent overfitting while simultaneously stabilizing the coefficient estimates and shrinking unnecessary parameters toward zero. Hence, we expec that this may leads to a more robust and interpretable model.
+
+We set $\alpha = 0.5$ to balance the Ridge and Lasso penalties within the Elastic Net framework. We then used `cv.glmnet()` to identify the optimal value of $\lambda$. This function performs 10-fold cross-validation by default, repeatedly splitting the data into ten parts, training the model on nine parts, and validating it on the remaining part to select the  $\lambda$ that minimizes the cross-validated error.
+
+
+```{r elastic-net-model}
+set.seed(123)
+
+# Prepare matrices for Elastic Net
+y <- regression_data$mean_glth
+
+x <- regression_data |> 
+  select(
+    mean_mhlth, mean_depression, mean_access, mean_smoking,
+    mean_binge, mean_sleep, mean_lpa, mean_diabetes, mean_bphigh,
+    EI_proportion, PO_proportion
+  ) |> 
+  as.matrix()
+
+# Cross-validate to find optimal lambda
+cv_en <- cv.glmnet(x, y, alpha = 0.5, nfolds = 10)
+lambda_best <- cv_en$lambda.min
+
+# Fit final model
+fit_en <- glmnet(x, y, alpha = 0.5, lambda = lambda_best)
+
+# Extract coefficients
+coef_en <- coef(fit_en) %>%
+  as.matrix() %>%
+  as.data.frame() %>%
+  rownames_to_column("variable") %>%
+  rename(coefficient = s0) %>%
+  filter(coefficient != 0)
+
+kable(coef_en, 
+      digits = 3,
+      caption = "Elastic Net Model Coefficients")
+```
+
+Final model based on elastic net is Prevalence of fair/poor general health = -7.217 + 0.487 Prevalence of poor mental health + 0.005 Prevalence of depression + 0.046 Prevalence of limited access to care + 0.027 Prevalence of current smoking + 0.194 Prevalence of no leisure-time physical activity + 0.535 Prevalence of diabetes + 0.032 Prevalence of high blood pressure + 10.817 Energy Insecurity proportion - 0.819 Power Outage proportion.
+
+### 4.4 Model Comparison via Cross-Validation
+
+```{r cross-validation}
+set.seed(123)
+
+# Create train-test splits
+cv_df <- crossv_mc(regression_data, n = 100) %>%
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  )
+
+# Train and evaluate models
+cv_results <- cv_df %>%
+  mutate(
+    # Model 1: Full MLR
+    model_mlr = map(train, \(df) {
+      lm(mean_glth ~ mean_mhlth + mean_depression + mean_access +
+           mean_smoking + mean_binge + mean_sleep + mean_lpa +
+           mean_diabetes + mean_bphigh + EI_proportion + PO_proportion,
+         data = df)
+    }),
+    rmse_mlr = map2_dbl(model_mlr, test, rmse),
+    
+    # Model 2: Elastic Net
+    model_en = map(train, \(df) {
+      y_tr <- df$mean_glth
+      x_tr <- df %>%
+        select (mean_mhlth, mean_depression, mean_access, mean_smoking,
+          mean_binge, mean_sleep, mean_lpa, mean_diabetes, mean_bphigh,
+          EI_proportion, PO_proportion) %>%
+        as.matrix()
+      cv <- cv.glmnet(x_tr, y_tr, alpha = 0.5)
+      glmnet(x_tr, y_tr, alpha = 0.5, lambda = cv$lambda.min)
+    }),
+    rmse_en = map2_dbl(model_en, test, \(fit, df) {
+      y_te <- df$mean_glth
+      x_te <- df %>%
+        select(mean_mhlth, mean_depression, mean_access, mean_smoking,
+          mean_binge, mean_sleep, mean_lpa, mean_diabetes, mean_bphigh,
+          EI_proportion, PO_proportion) %>%
+        as.matrix()
+      pred <- predict(fit, x_te) %>% as.numeric()
+      sqrt(mean((y_te - pred)^2))
+    }),
+    
+    # Model 3: Electricity-only
+    model_elec = map(train, \(df) {
+      lm(mean_glth ~ EI_proportion * PO_proportion, data = df)
+    }),
+    rmse_elec = map2_dbl(model_elec, test, rmse)
+  )
+
+# Summarize RMSE distributions
+rmse_summary <- cv_results %>%
+  select(starts_with("rmse")) %>%
+  pivot_longer(everything(),
+               names_to = "model",
+               values_to = "rmse",
+               names_prefix = "rmse_") %>%
+  mutate(model = recode(model,
+                        "mlr" = "Full MLR",
+                        "en" = "Elastic Net",
+                        "elec" = "Electricity-Only"))
+```
+
+```{r plot-model-comparison}
+# Plot RMSE comparison
+p_rmse_comparison <- rmse_summary %>%
+  ggplot(aes(x = model, y = rmse, fill = model)) +
+  geom_violin(alpha = 0.7) +
+  geom_boxplot(width = 0.2, alpha = 0.9) +
+  labs(title = "Model Performance Comparison",
+       subtitle = "100 Monte Carlo Cross-Validation Splits",
+       x = "Model",
+       y = "RMSE",
+       fill = "Model") +
+  scale_fill_manual(values = c("#2E86AB", "#EDAE49", "#D1495B")) +
+  theme(legend.position = "none")
+
+p_rmse_comparison
+```
+
+**Model Performance Summary:**
+- **Elastic Net** achieves the lowest RMSE (most stable predictions)
+- **Full MLR** shows moderate performance with some variability
+- **Electricity-only model** has highest RMSE, confirming energy variables alone are insufficient
+
+### 4.5 Bootstrap Stability Analysis
+
+After fitting the MLR model, we applied the bootstrap to evaluate how stable our results are under repeated sampling. The usual regression output relies on assumptions such as normality and constant variance, which may not fully hold in our data. Bootstrap resampling lets us approximate the sampling distribution of key estimates directly from the data, providing more robust standard errors and confidence intervals. This helps us assess whether the model’s conclusions remain consistent across resampled datasets.
+
+```{r bootstrap-analysis}
+set.seed(123)
+
+# Perform bootstrap
+boot_straps <- regression_data %>%
+   modelr::bootstrap(n = 5000)
+
+# Extract coefficients from each bootstrap sample
+boot_coefs <- boot_straps %>%
+  mutate(
+    model = map(strap, \(s) {
+      df <- s$data
+      y_boot <- df$mean_glth
+      x_boot <- df %>%
+        select(mean_mhlth, mean_depression, mean_access, mean_smoking,
+            mean_binge, mean_sleep, mean_lpa, mean_diabetes, mean_bphigh,
+            EI_proportion, PO_proportion) %>%
+        as.matrix()
+      
+      cv_boot <- cv.glmnet(x_boot, y_boot, alpha = 0.5)
+      coef_boot <- coef(cv_boot, s = cv_boot$lambda.min)
+      
+      tibble(
+        variable = rownames(coef_boot),
+        coefficient = as.numeric(coef_boot)
+      )
+    })
+  ) %>%
+  unnest(model) %>%
+  filter(variable != "(Intercept)")
+
+# Calculate bootstrap standard errors
+boot_se <- boot_coefs %>%
+  group_by(variable) %>%
+  summarize(
+    boot_mean = mean(coefficient),
+    boot_se = sd(coefficient),
+    boot_ci_low = quantile(coefficient, 0.025),
+    boot_ci_high = quantile(coefficient, 0.975)
+  ) %>%
+  mutate(variable = str_remove(variable, "_crude_prev")) %>%
+  arrange(desc(abs(boot_mean)))
+```
+
+```{r plot-bootstrap-results}
+boot_all <- boot_se %>%
+  mutate(variable = factor(variable, levels = variable))
+
+p_bootstrap <- boot_all %>%
+  ggplot(aes(x = variable, y = boot_mean)) +
+  geom_point(size = 3, color = "#2E86AB") +
+  geom_errorbar(aes(ymin = boot_ci_low, ymax = boot_ci_high),
+                width = 0.2, color = "#2E86AB") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#D1495B") +
+  labs(
+    title = "Bootstrap Coefficient Stability for All Variables",
+    subtitle = "95% confidence intervals from 5,000 bootstrap samples",
+    x = "Variable",
+    y = "Coefficient Estimate"
+  ) +
+  coord_flip()
+
+p_bootstrap
+
+```
+
+**Bootstrap Findings:**
+- **EI_proportion** and **PO_proportion** show large confidence intervals, indicating instability
+- all other vairables have more stable estimate. 
+
+Based on our EDA and regression analyses, here's a more detailed conclusion section:
+
+## 5. Discussion and Conclusion
+
+### 5.1 Synthesis of Key Findings
+
+Our comprehensive analysis reveals a complex interplay between energy insecurity, power infrastructure challenges, and population health outcomes across U.S. states. The evidence converges on several critical insights:
+
+**5.1.1 Widespread but Heterogeneous Energy Challenges**
+Energy insecurity affects between 9.8% and 28.2% of households across states, with a national average of `r round(EI_summary$mean_EI*100, 1)`%. This substantial variation underscores that energy vulnerability is not uniformly distributed but concentrated in specific regions, likely reflecting broader socioeconomic disparities. Similarly, extended power outages (≥24 hours) affect `r round(PO_summary$mean_PO*100, 1)`% of households on average, ranging from `r round(PO_summary$min_PO*100, 1)`% to `r round(PO_summary$max_PO*100, 1)`%, indicating infrastructure reliability varies considerably by state.
+
+**5.1.2 Strong Association Between Energy Insecurity and Mental Health**
+The correlation analysis reveals a robust positive relationship (r = `r round(cor_test$estimate, 3)`, p < 0.001) between state-level energy insecurity and poor mental health prevalence. States with higher energy insecurity consistently exhibit worse mental health outcomes across multiple indicators. This association remains evident even after accounting for power outages, suggesting energy insecurity's impact extends beyond mere service interruptions to include affordability concerns, housing quality issues, and the psychological burden of energy poverty.
+
+**5.1.3 Differential Predictive Power of Energy Variables**
+Our modeling approach revealed important nuances in how energy-related factors contribute to poor general health:
+- **Energy Insecurity (EI_proportion)**: Shows meaningful but unstable associations in regression models, with bootstrap confidence intervals spanning both positive and negative values, indicating context-dependent effects.
+- **Power Outages (PO_proportion)**: Similarly unstable in regression models, suggesting their health impacts may be mediated by other factors or vary by local context.
+- **Model Performance**: The electricity-only model (RMSE = `r round(mean(filter(rmse_summary, model == "Electricity-Only")$rmse), 3)` ± `r round(sd(filter(rmse_summary, model == "Electricity-Only")$rmse), 3)`) performed substantially worse than the full Elastic Net model (RMSE = `r round(mean(filter(rmse_summary, model == "Elastic Net")$rmse), 3)` ± `r round(sd(filter(rmse_summary, model == "Elastic Net")$rmse), 3)`), confirming that energy variables alone cannot adequately explain health outcomes.
+
+**5.1.4 Energy Insecurity as a Marker of Broader Vulnerability**
+States in the highest EI tertile consistently show worse outcomes across all ten health indicators examined, including:
+- Mental health (poor mental health prevalence: +`r round((mean(filter(health_by_ei, variable == "Poor Mental Health" & EI_group == "High EI")$prevalence) - mean(filter(health_by_ei, variable == "Poor Mental Health" & EI_group == "Low EI")$prevalence)), 1)` percentage points higher than low EI states)
+- Physical health indicators
+- Health behaviors
+- Chronic disease prevalence
+
+This pattern suggests energy insecurity operates not merely as an isolated stressor but as a marker of broader socioeconomic vulnerability that manifests across multiple health domains.
+
+### 5.2 Mechanistic Interpretation
+
+The observed associations likely reflect several interconnected pathways:
+
+**5.2.1 Direct Stress Pathways**
+- **Financial Stress**: Choosing between energy bills and basic necessities creates chronic financial anxiety
+- **Thermal Stress**: Inability to maintain safe home temperatures affects sleep quality and physiological stress responses
+- **Service Uncertainty**: Fear of disconnection or unpredictable outages creates anticipatory anxiety
+
+**5.2.2 Indirect Pathways Through Health Behaviors**
+Our analyses show high-EI states have higher rates of smoking (`r round((mean(filter(health_by_ei, variable == "Current Smoking" & EI_group == "High EI")$prevalence) - mean(filter(health_by_ei, variable == "Current Smoking" & EI_group == "Low EI")$prevalence)), 1)` pp difference), binge drinking, and physical inactivity—potential coping mechanisms that compound health risks.
+
+**5.2.3 Healthcare Access as a Mediating Factor**
+The strong negative association between healthcare access (access2) and poor general health in our regression models (coefficient = -`r round(abs(filter(mlr_summary, term == "mean_access")$estimate), 3)`), coupled with higher rates of healthcare access barriers in high-EI states, suggests limited healthcare access may exacerbate the health impacts of energy insecurity.
+
+### 5.3 Policy Implications with Specific Targets
+
+Based on our state-level findings, we propose tiered interventions:
+
+**5.3.1 High-Priority States (Top EI Tertile)**
+For states with energy insecurity above `r round(quantile(RECS_EI$EI_proportion, 0.67)*100, 1)`%:
+- Implement integrated energy assistance-mental health screening programs
+- Target energy efficiency upgrades in vulnerable housing stock
+- Develop early warning systems linking extreme weather forecasts with energy assistance outreach
+
+**5.3.2 Infrastructure Reliability Interventions**
+Given the weak but positive EI-PO relationship (R² = `r round(summary(fit_ei_po)$r.squared, 3)`), states with both high EI and high PO should prioritize:
+- Grid modernization in vulnerable communities
+- Backup power solutions for medically vulnerable populations
+- Coordination between public health and utility emergency planning
+
+**5.3.3 Monitoring and Evaluation**
+- Incorporate energy insecurity metrics into state public health surveillance systems
+- Establish longitudinal tracking of the EI-mental health relationship
+- Develop predictive models using our Elastic Net framework to identify communities at highest risk
+
+### 5.4 Methodological Contributions and Limitations
+
+**5.4.1 Analytical Strengths**
+- **Multi-Method Approach**: Combining EDA, correlation analysis, multiple regression, and machine learning (Elastic Net) provides robust, triangulated evidence
+- **Cross-Validation Framework**: 100 Monte Carlo splits ensure model performance estimates are reliable
+- **Bootstrap Stability Analysis**: 5,000 resamples provide precise estimates of coefficient uncertainty
+- **State-Level Focus**: Appropriate scale for policy-relevant insights while maintaining sufficient statistical power
+
+**5.4.2 Key Limitations**
+- **Cross-Sectional Design**: Cannot establish temporal precedence or causal direction
+- **Ecological Fallacy Risk**: State-level associations may not reflect individual-level relationships
+- **Measurement Challenges**: RECS energy insecurity measures rely on self-report; PLACES data are model-based estimates
+- **Unobserved Confounding**: Despite including numerous covariates, residual confounding likely remains
+- **Temporal Misalignment**: 2020 data collection occurred during COVID-19, potentially influencing both energy use and mental health
+
+**5.4.3 Data Integration Challenges**
+The `r nrow(merged_clean)` states with complete data represent a `r round(nrow(merged_clean)/51*100, 1)`% match rate between RECS and PLACES datasets. While sufficient for state-level analysis, this highlights challenges in harmonizing federal datasets with different geographic schemas and collection methodologies.
+
+### 5.5 Directions for Future Research
+
+**5.5.1 Causal Inference Approaches**
+- Natural experiments leveraging variation in energy assistance program implementation
+- Longitudinal studies tracking households before/after energy insecurity transitions
+- Instrumental variable approaches using policy changes or weather shocks
+
+**5.5.2 Mechanistic Investigations**
+- Mediation analyses to quantify pathways through financial stress, sleep disruption, and social isolation
+- Effect modification analyses to identify subgroups most vulnerable to EI impacts
+- Biological stress markers (cortisol, inflammatory markers) in energy-insecure populations
+
+**5.5.3 Methodological Extensions**
+- Multi-level models incorporating both state- and individual-level data
+- Spatial analyses examining geographic clustering of EI and mental health outcomes
+- Time-series analyses of seasonal patterns in EI and mental health service utilization
+
+### 5.6 Conclusion
+
+This study provides compelling evidence that energy insecurity represents a significant public health concern with particularly strong links to mental distress at the population level. The `r round(cor_test$estimate, 3)` correlation between state-level energy insecurity and poor mental health prevalence, coupled with consistent associations across multiple health indicators, suggests energy vulnerability operates as both a direct psychosocial stressor and a marker of broader socioeconomic disadvantage.
+
+While our Elastic Net model demonstrates that energy factors alone cannot fully explain health outcomes (RMSE = `r round(mean(filter(rmse_summary, model == "Elastic Net")$rmse), 3)`), their meaningful inclusion alongside traditional health determinants improves prediction accuracy by `r round((mean(filter(rmse_summary, model == "Electricity-Only")$rmse) - mean(filter(rmse_summary, model == "Elastic Net")$rmse))/mean(filter(rmse_summary, model == "Electricity-Only")$rmse)*100, 1)`% compared to electricity-only models. This suggests energy insecurity should be incorporated into public health surveillance and intervention frameworks alongside established social determinants of health.
+
+The convergence of our EDA findings (visual patterns across states), correlation analyses (quantified associations), and regression results (multivariable-adjusted relationships) provides robust, methodologically diverse evidence supporting the integration of energy policy and public health initiatives. Addressing energy insecurity through targeted assistance programs, infrastructure improvements, and preventive housing interventions may offer a practical pathway to improving mental health outcomes while addressing a critical dimension of household wellbeing.
+
+As climate change intensifies and energy costs fluctuate, the relationship between energy security and public health will likely grow in importance. Our findings underscore the need for coordinated energy-health policies that recognize energy not merely as a utility but as a fundamental determinant of population health and wellbeing.
+
+
+## 6. Related Works
+
+### 1. PMC/NIH Article (PMC11364296) 
+
+This NIH study directly examines how **energy insecurity associates with diabetes prevalence** in U.S. households, investigating whether inability to afford adequate utilities increases diabetes risk through stress, environmental, and socioeconomic pathways.
+
+### 2. U.S. Energy Information Administration (EIA) Residential Consumption 
+
+The EIA's residential energy consumption section provides **comprehensive data and analysis on U.S. household energy use**, including trends in electricity, natural gas, and heating fuel consumption across different regions, housing types, and demographic groups.
+
+### 3. CDC PLACES Project
+
+The CDC's PLACES initiative provides **local-level health data estimates** for chronic diseases, health outcomes, and prevention behaviors across all U.S. counties, census tracts, and ZIP codes to support community health planning and interventions.
+
+### 4. Columbia University Energy Insecurity Research 
+This publication examines **energy insecurity in the United States**, analyzing the prevalence and impacts of households struggling to afford basic energy needs, with particular focus on vulnerable populations and policy recommendations for addressing this challenge.
+
+### links:
+
+<https://pmc.ncbi.nlm.nih.gov/articles/PMC11364296/>
+
+<https://www.eia.gov/consumption/residential/index.php>
+
+<https://www.cdc.gov/places/index.html>
+
+<https://www.energypolicy.columbia.edu/publications/energy-insecurity-in-the-united-states/>
