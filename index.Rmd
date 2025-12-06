@@ -700,21 +700,15 @@ document.addEventListener('keydown', function(event) {
 });
 </script>
 
-<!-- =============== part 4 video =============== -->
+<!-- =============== part 4 video =============== 
 <br>
 <br>
 <br>
 <br>
-
-
 <div style="text-align:center; margin: 30px auto; max-width: 900px;" markdown="1">
-
 <h2 class="section-title">🎬 Video Overview</h2>
-
 We created a short video to provide an overview of our project and help viewers quickly understand its main goals, methods, results and insights. This visual summary offers a clear and engaging way to explore the key concepts behind our work, making the project more accessible to a wider audience.
-
 </div>
-
 <div class="video-container">
   <iframe 
     src="https://www.youtube.com/embed/VIDEO_ID" 
@@ -723,7 +717,7 @@ We created a short video to provide an overview of our project and help viewers 
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
     allowfullscreen>
   </iframe>
-</div>
+</div>-->
 
 
 
